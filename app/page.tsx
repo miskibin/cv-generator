@@ -17,46 +17,6 @@ export default function CVGenerator() {
   const cvRef = useRef<HTMLDivElement>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = JSON.parse(e.target!.result as string) as CVData;
-        setCvData(data);
-        setJsonError(null);
-      } catch (error) {
-        setJsonError(
-          "Invalid JSON file. Please check the format and try again."
-        );
-        setCvData(null);
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  const handleJsonInput = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    try {
-      if (!event.target.value) {
-        setCvData(null);
-        setJsonError(null);
-        return;
-      }
-
-      const data = JSON.parse(event.target.value) as CVData;
-      setCvData(data);
-      setJsonError(null);
-    } catch (error) {
-      setJsonError("Invalid JSON. Please check the format and try again.");
-      if (event.target.value === "") {
-        setCvData(null);
-        setJsonError(null);
-      }
-    }
-  };
-
   const generatePDF = async () => {
     if (!cvRef.current || !cvData) return;
 
