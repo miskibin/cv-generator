@@ -1,0 +1,113 @@
+{
+    "firstName": "Sarah",
+    "lastName": "Wilson",
+    "github": "sarahwilson-dev",
+    "email": "sarah.wilson@outlook.com",
+    "phone": "+44 7700 900123",
+    "linkedin": "sarah-wilson-dev",
+    "about": "Software developer with 4+ years of experience specializing in full-stack web development. Passionate about creating clean, maintainable code and improving user experiences. Strong background in React ecosystem and modern JavaScript development practices.",
+    "skills": [
+        "TypeScript",
+        "React",
+        "Next.js",
+        "Node.js",
+        "PostgreSQL",
+        "Docker",
+        "Git",
+        "AWS",
+        "REST APIs",
+        "Jest",
+        "Tailwind CSS"
+    ],
+    "languages": {
+        "English": "Native",
+        "French": "B1",
+        "German": "A2"
+    },
+    "education": [
+        {
+            "institution": "University of Manchester",
+            "degree": "BSc Computer Science",
+            "graduationDate": "June 2019"
+        },
+        {
+            "institution": "Codecademy",
+            "degree": "Full-Stack Engineering Certificate",
+            "graduationDate": "December 2019"
+        }
+    ],
+    "experience": [
+        {
+            "company": "Fintech Solutions Ltd",
+            "position": "Senior Frontend Developer",
+            "startDate": "March 2022",
+            "endDate": "Present",
+            "summary": "Lead frontend developer for the company's main financial dashboard product, managing a team of three developers.",
+            "projects": [
+                {
+                    "name": "Dashboard Redesign",
+                    "description": "Led complete redesign of main dashboard interface, resulting in 40% improvement in user engagement and 25% reduction in customer support tickets.",
+                    "technologies": [
+                        "React",
+                        "TypeScript",
+                        "Redux",
+                        "Material-UI"
+                    ]
+                },
+                {
+                    "name": "Performance Optimization",
+                    "description": "Improved application loading time by 60% through code splitting and lazy loading implementation.",
+                    "technologies": [
+                        "Webpack",
+                        "React.lazy",
+                        "Web Vitals"
+                    ]
+                }
+            ]
+        },
+        {
+            "company": "WebTech Solutions",
+            "position": "Frontend Developer",
+            "startDate": "July 2019",
+            "endDate": "February 2022",
+            "summary": "Developed and maintained multiple client websites and web applications.",
+            "projects": [
+                {
+                    "name": "E-commerce Platform",
+                    "description": "Built responsive e-commerce platform serving 10,000+ daily users, integrating with Stripe and inventory management systems.",
+                    "technologies": [
+                        "Next.js",
+                        "Node.js",
+                        "MongoDB",
+                        "Stripe API"
+                    ]
+                }
+            ]
+        }
+    ],
+    "projects": [
+        {
+            "name": "Health Tracker App",
+            "description": "Full-stack application for tracking fitness goals and nutrition. Features include workout planning, meal tracking, and progress visualization.",
+            "technologies": [
+                "React Native",
+                "Express.js",
+                "MongoDB",
+                "Chart.js"
+            ],
+            "github": "github.com/sarahwilson-dev/health-tracker",
+            "url": "health-tracker-app.com"
+        },
+        {
+            "name": "Weather Dashboard",
+            "description": "Real-time weather dashboard with location-based forecasting and severe weather alerts.",
+            "technologies": [
+                "React",
+                "OpenWeather API",
+                "Tailwind CSS"
+            ],
+            "github": "github.com/sarahwilson-dev/weather-dash",
+            "url": "weather-dash.netlify.app"
+        }
+    ]
+}
