@@ -139,6 +139,12 @@
     overflow: auto;
     color: #222222;
     letter-spacing: -0.01em;
+    page-break-inside: auto;
+  }
+
+  .break-inside-avoid {
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 
   /* Print-specific styles */
@@ -169,16 +175,12 @@
       page-break-after: always;
     }
 
-    h1 {
-      font-size: 24pt !important;
-    }
-
-    h2 {
-      font-size: 16pt !important;
-    }
-
-    h3 {
-      font-size: 14pt !important;
+    h1,
+    h2,
+    h3,
+    h4 {
+      break-after: avoid;
+      break-inside: avoid;
     }
 
     p,
@@ -200,6 +202,20 @@
 
     .leading-tight {
       line-height: 1.2 !important;
+    }
+
+    a {
+      color: #0000EE;
+      text-decoration: underline;
+    }
+
+    li,
+    tr {
+      break-inside: avoid;
+    }
+
+    .break-inside-avoid {
+      break-inside: avoid-page;
     }
   }
 }
