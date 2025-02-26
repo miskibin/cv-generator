@@ -2,495 +2,390 @@
 
 import { CVData } from "@/types/cv";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Trash2, Upload } from "lucide-react";
+import {
+  Wand2,
+  LoaderCircle,
+  ClipboardCopy,
+  CheckCircle,
+  XCircle,
+  BookOpen,
+} from "lucide-react";
+import { useState, useRef } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { useState } from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { exampleText } from "./examples";
 
 interface CVFormProps {
   onDataChange: (data: CVData) => void;
-  initialData?: CVData;
 }
 
-export function CVForm({ onDataChange, initialData }: CVFormProps) {
-  const defaultData: CVData = {
-    firstName: "",
-    lastName: "",
-    email: "",
-    ...initialData,
+// Sarah's CV example text - detailed professional version
+
+export function CVForm({ onDataChange }: CVFormProps) {
+  const [userText, setUserText] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [progressMessages, setProgressMessages] = useState<string[]>([]);
+  const [jsonOutput, setJsonOutput] = useState<string>("");
+  const [copied, setCopied] = useState(false);
+  const [exampleCopied, setExampleCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState<"input" | "output">("input");
+
+  const abortController = useRef<AbortController | null>(null);
+  const outputAreaRef = useRef<HTMLDivElement>(null);
+
+  const useExample = () => {
+    setUserText(exampleText);
   };
 
-  const [data, setData] = useState<CVData>(defaultData);
-  const [jsonError, setJsonError] = useState<string | null>(null);
-
-  const updateData = (updates: Partial<CVData>) => {
-    const newData = { ...data, ...updates };
-    setData(newData);
-    onDataChange(newData);
+  const clearForm = () => {
+    setUserText("");
+    setError(null);
+    setProgressMessages([]);
+    setJsonOutput("");
   };
 
-  const addArrayItem = (field: keyof CVData, item: any) => {
-    const currentArray = (data[field] as any[]) || [];
-    updateData({ [field]: [...currentArray, item] });
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(userText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
-  const removeArrayItem = (field: keyof CVData, index: number) => {
-    const currentArray = (data[field] as any[]) || [];
-    updateData({
-      [field]: currentArray.filter((_, i) => i !== index),
-    });
+  const copyExample = () => {
+    navigator.clipboard.writeText(exampleText);
+    setExampleCopied(true);
+    setTimeout(() => setExampleCopied(false), 2000);
   };
 
-  const handleJsonInput = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const cancelGeneration = () => {
+    if (abortController.current) {
+      abortController.current.abort();
+      abortController.current = null;
+      setGenerating(false);
+      setProgressMessages((prev) => [...prev, "Generation canceled"]);
+    }
+  };
+
+  const generateCV = async () => {
+    if (!userText.trim()) {
+      setError("Please provide some information about yourself first");
+      return;
+    }
+
+    setGenerating(true);
+    setError(null);
+    setProgressMessages([]);
+    setJsonOutput("");
+    setActiveTab("output");
+
     try {
-      if (!event.target.value) {
-        setData(defaultData);
-        setJsonError(null);
-        return;
+      // Cancel any existing request
+      if (abortController.current) {
+        abortController.current.abort();
       }
 
-      const jsonData = JSON.parse(event.target.value) as CVData;
-      setData(jsonData);
-      onDataChange(jsonData);
-      setJsonError(null);
+      // Create a new AbortController
+      abortController.current = new AbortController();
+
+      const response = await fetch("/api/generate-cv", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text: userText }),
+        signal: abortController.current.signal,
+      });
+
+      if (!response.ok || !response.body) {
+        throw new Error("Failed to start generation");
+      }
+
+      // Set up streaming reader
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) {
+          break;
+        }
+
+        // Process the chunks
+        const chunk = decoder.decode(value);
+        const lines = chunk.split("\n").filter(Boolean);
+
+        for (const line of lines) {
+          try {
+            const data = JSON.parse(line);
+
+            // Handle progress updates
+            if (data.progress) {
+              setProgressMessages((prev) => [...prev, data.progress]);
+
+              // Auto scroll to bottom of output area
+              if (outputAreaRef.current) {
+                outputAreaRef.current.scrollTop =
+                  outputAreaRef.current.scrollHeight;
+              }
+            }
+
+            // Handle errors
+            if (data.error) {
+              throw new Error(data.error);
+            }
+
+            // Handle data
+            if (data.data) {
+              // Format JSON with indentation for display
+              const formattedJson = JSON.stringify(data.data, null, 2);
+              setJsonOutput(formattedJson);
+
+              // Pass the data to the parent component
+              onDataChange(data.data);
+
+              // Add success message
+              setProgressMessages((prev) => [
+                ...prev,
+                "✅ CV generated successfully!",
+              ]);
+
+              // Auto scroll to bottom of output area
+              if (outputAreaRef.current) {
+                setTimeout(() => {
+                  if (outputAreaRef.current) {
+                    outputAreaRef.current.scrollTop =
+                      outputAreaRef.current.scrollHeight;
+                  }
+                }, 100);
+              }
+            }
+          } catch (e) {
+            // Ignore JSON parse errors for incomplete chunks
+            console.log("Parse error or incomplete chunk:", e);
+          }
+        }
+      }
     } catch (error) {
-      setJsonError("Invalid JSON format");
+      if ((error as Error).name !== "AbortError") {
+        console.error("Error generating CV:", error);
+        setError((error as Error).message || "Failed to generate CV data");
+        setProgressMessages((prev) => [
+          ...prev,
+          `❌ Error: ${(error as Error).message}`,
+        ]);
+      }
+    } finally {
+      setGenerating(false);
+      abortController.current = null;
     }
   };
 
   return (
-    <div className="space-y-4 overflow-y-auto max-h-[calc(100vh-2rem)] p-4">
-      <Card className="mb-4">
-        <CardContent className="pt-6">
-          <Textarea
-            placeholder="Paste your CV data in JSON format here..."
-            className="min-h-[100px] font-mono text-sm"
-            onChange={handleJsonInput}
-          />
-          {jsonError && (
-            <Alert variant="destructive" className="mt-2">
-              <AlertDescription>{jsonError}</AlertDescription>
-            </Alert>
+    <div className="flex flex-col h-full w-full">
+      <div className="flex justify-between items-center p-4 border-b bg-slate-50">
+        <h2 className="text-xl font-semibold">AI CV Generator</h2>
+        <div className="flex items-center space-x-2">
+          <Badge
+            variant={generating ? "secondary" : "outline"}
+            className={generating ? "animate-pulse" : ""}
+          >
+            {generating ? "Generating..." : "Ready"}
+          </Badge>
+          {!generating && (
+            <Button
+              onClick={generateCV}
+              disabled={!userText.trim()}
+              className="flex items-center gap-2"
+            >
+              <Wand2 className="h-4 w-4" />
+              Generate CV
+            </Button>
           )}
-        </CardContent>
-      </Card>
+          {generating && (
+            <Button
+              variant="destructive"
+              onClick={cancelGeneration}
+              className="flex items-center gap-2"
+            >
+              <XCircle className="h-4 w-4" />
+              Cancel
+            </Button>
+          )}
+        </div>
+      </div>
 
-      <Accordion type="single" collapsible className="w-full">
-        <AccordionItem value="personal">
-          <AccordionTrigger>Personal Information</AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-4 pt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  placeholder="First Name"
-                  value={data.firstName}
-                  onChange={(e) => updateData({ firstName: e.target.value })}
-                />
-                <Input
-                  placeholder="Last Name"
-                  value={data.lastName}
-                  onChange={(e) => updateData({ lastName: e.target.value })}
-                />
-              </div>
-              <Input
-                placeholder="Email"
-                type="email"
-                value={data.email}
-                onChange={(e) => updateData({ email: e.target.value })}
-              />
-              <Input
-                placeholder="Phone"
-                value={data.phone || ""}
-                onChange={(e) => updateData({ phone: e.target.value })}
-              />
-              <Input
-                placeholder="GitHub URL"
-                value={data.github || ""}
-                onChange={(e) => updateData({ github: e.target.value })}
-              />
-              <Input
-                placeholder="LinkedIn URL"
-                value={data.linkedin || ""}
-                onChange={(e) => updateData({ linkedin: e.target.value })}
-              />
-              <Textarea
-                placeholder="About yourself"
-                value={data.about || ""}
-                onChange={(e) => updateData({ about: e.target.value })}
-              />
-            </div>
-          </AccordionContent>
-        </AccordionItem>
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as "input" | "output")}
+        className="flex-1 flex flex-col"
+      >
+        <div className="px-4 pt-2 border-b">
+          <TabsList className="grid grid-cols-2 w-64">
+            <TabsTrigger value="input">User Input</TabsTrigger>
+            <TabsTrigger value="output">Generation Output</TabsTrigger>
+          </TabsList>
+        </div>
 
-        <AccordionItem value="skills">
-          <AccordionTrigger>Skills</AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-2 pt-4">
-              {data.skills?.map((skill, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <Input
-                    value={skill}
-                    onChange={(e) => {
-                      const newSkills = [...(data.skills || [])];
-                      newSkills[index] = e.target.value;
-                      updateData({ skills: newSkills });
-                    }}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeArrayItem("skills", index)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+        <TabsContent value="input" className="flex-1 flex flex-col p-4 pt-2">
+          {/* Example accordion */}
+          <Accordion type="single" collapsible className="w-full mb-4">
+            <AccordionItem value="example" className="border rounded-md">
+              <AccordionTrigger className="px-4 py-2 hover:bg-slate-50">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="h-4 w-4 text-blue-500" />
+                  <span>View example input</span>
                 </div>
-              ))}
-              <Button
-                variant="outline"
-                onClick={() => addArrayItem("skills", "")}
-              >
-                <Plus className="h-4 w-4 mr-2" /> Add Skill
-              </Button>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
-        <AccordionItem value="languages">
-          <AccordionTrigger>Languages</AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-2 pt-4">
-              {Object.entries(data.languages || {}).map(
-                ([language, level], index) => (
-                  <div key={language} className="flex items-center gap-2">
-                    <Input
-                      placeholder="Language"
-                      value={language}
-                      onChange={(e) => {
-                        const newLanguages = { ...data.languages } as Record<
-                          string,
-                          string
-                        >;
-                        delete newLanguages[language];
-                        newLanguages[e.target.value] = level;
-                        updateData({ languages: newLanguages });
-                      }}
-                    />
-                    <Input
-                      placeholder="Level"
-                      value={level}
-                      onChange={(e) => {
-                        updateData({
-                          languages: {
-                            ...(data.languages || {}),
-                            [language]: e.target.value,
-                          },
-                        });
-                      }}
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        const newLanguages = { ...data.languages } as Record<
-                          string,
-                          string
-                        >;
-                        delete newLanguages[language];
-                        updateData({ languages: newLanguages });
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
+              </AccordionTrigger>
+              <AccordionContent className="bg-slate-50 rounded-b-md border-t">
+                <div className="relative p-4">
+                  <ScrollArea className="h-60">
+                    <pre className="whitespace-pre-wrap text-sm font-sans">
+                      {exampleText}
+                    </pre>
+                  </ScrollArea>
+                  <div className="sticky bottom-0 flex justify-end gap-2 pt-2 bg-slate-50">
+                    <Button size="sm" variant="outline" onClick={copyExample}>
+                      <ClipboardCopy className="h-3.5 w-3.5 mr-1" />
+                      {exampleCopied ? "Copied!" : "Copy Example"}
+                    </Button>
+                    <Button size="sm" onClick={useExample}>
+                      Use This Example
                     </Button>
                   </div>
-                )
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+
+          {/* Form controls */}
+          <div className="flex justify-end space-x-2 mb-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={clearForm}
+              disabled={generating || !userText}
+            >
+              <XCircle className="h-4 w-4 mr-1" />
+              Clear
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={copyToClipboard}
+              disabled={!userText}
+            >
+              {copied ? (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-1" /> Copied
+                </>
+              ) : (
+                <>
+                  <ClipboardCopy className="h-4 w-4 mr-1" /> Copy
+                </>
               )}
-              <Button
-                variant="outline"
-                onClick={() => {
-                  const newLanguages = { ...data.languages, "": "" };
-                  updateData({ languages: newLanguages });
-                }}
-              >
-                <Plus className="h-4 w-4 mr-2" /> Add Language
-              </Button>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
+            </Button>
+          </div>
 
-        <AccordionItem value="experience">
-          <AccordionTrigger>Experience</AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-4 pt-4">
-              {data.experience?.map((exp, index) => (
-                <div key={index} className="border rounded-lg p-4">
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <Input
-                        placeholder="Company"
-                        value={exp.company}
-                        onChange={(e) => {
-                          const newExp = [...(data.experience || [])];
-                          newExp[index] = { ...exp, company: e.target.value };
-                          updateData({ experience: newExp });
-                        }}
-                      />
-                      <Input
-                        placeholder="Position"
-                        value={exp.position}
-                        onChange={(e) => {
-                          const newExp = [...(data.experience || [])];
-                          newExp[index] = { ...exp, position: e.target.value };
-                          updateData({ experience: newExp });
-                        }}
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <Input
-                        placeholder="Start Date"
-                        value={exp.startDate}
-                        onChange={(e) => {
-                          const newExp = [...(data.experience || [])];
-                          newExp[index] = { ...exp, startDate: e.target.value };
-                          updateData({ experience: newExp });
-                        }}
-                      />
-                      <Input
-                        placeholder="End Date"
-                        value={exp.endDate}
-                        onChange={(e) => {
-                          const newExp = [...(data.experience || [])];
-                          newExp[index] = { ...exp, endDate: e.target.value };
-                          updateData({ experience: newExp });
-                        }}
-                      />
-                    </div>
-                    <Textarea
-                      placeholder="Summary"
-                      value={exp.summary || ""}
-                      onChange={(e) => {
-                        const newExp = [...(data.experience || [])];
-                        newExp[index] = { ...exp, summary: e.target.value };
-                        updateData({ experience: newExp });
-                      }}
-                    />
+          {/* Main textarea */}
+          <Textarea
+            placeholder="Tell me about your professional experience, education, skills, and contact information..."
+            value={userText}
+            onChange={(e) => setUserText(e.target.value)}
+            className="flex-1 min-h-0 resize-none"
+            disabled={generating}
+          />
 
-                    <div className="space-y-2">
-                      <h4 className="font-medium">Projects</h4>
-                      {exp.projects?.map((project, pIndex) => (
+          {error && (
+            <Alert variant="destructive" className="mt-2">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="text-xs text-muted-foreground mt-2">
+            <p>
+              Describe your experience, skills, education, and contact
+              information. The AI will generate your CV structure.
+            </p>
+          </div>
+        </TabsContent>
+
+        <TabsContent
+          value="output"
+          className="flex-1 flex flex-col overflow-hidden p-4 pt-2"
+        >
+          <div className="flex-1 min-h-0 flex flex-col">
+            <div className="flex-1 flex flex-col overflow-hidden border rounded-md">
+              <div className="bg-slate-100 border-b p-2 flex justify-between">
+                <span className="font-mono text-sm">CV Data Generation</span>
+                {jsonOutput && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(jsonOutput);
+                      setProgressMessages((prev) => [
+                        ...prev,
+                        "JSON copied to clipboard",
+                      ]);
+                    }}
+                  >
+                    <ClipboardCopy className="h-3.5 w-3.5 mr-1" /> Copy JSON
+                  </Button>
+                )}
+              </div>
+
+              <ScrollArea className="flex-1" ref={outputAreaRef}>
+                <div className="p-3 space-y-2">
+                  {progressMessages.length > 0 && (
+                    <div className="space-y-1.5">
+                      {progressMessages.map((msg, i) => (
                         <div
-                          key={pIndex}
-                          className="border-l-2 border-gray-200 pl-4 space-y-2"
+                          key={i}
+                          className={`text-sm px-2 py-1 rounded ${
+                            msg.includes("Error")
+                              ? "bg-red-50 text-red-700"
+                              : msg.includes("success")
+                              ? "bg-green-50 text-green-700"
+                              : "bg-blue-50 text-blue-700"
+                          }`}
                         >
-                          <Input
-                            placeholder="Project Name"
-                            value={project.name}
-                            onChange={(e) => {
-                              const newExp = [...(data.experience || [])];
-                              const newProjects = [...(exp.projects || [])];
-                              newProjects[pIndex] = {
-                                ...project,
-                                name: e.target.value,
-                              };
-                              newExp[index] = { ...exp, projects: newProjects };
-                              updateData({ experience: newExp });
-                            }}
-                          />
-                          <Textarea
-                            placeholder="Project Description"
-                            value={project.description}
-                            onChange={(e) => {
-                              const newExp = [...(data.experience || [])];
-                              const newProjects = [...(exp.projects || [])];
-                              newProjects[pIndex] = {
-                                ...project,
-                                description: e.target.value,
-                              };
-                              newExp[index] = { ...exp, projects: newProjects };
-                              updateData({ experience: newExp });
-                            }}
-                          />
-                          <Input
-                            placeholder="Technologies (comma-separated)"
-                            value={project.technologies.join(", ")}
-                            onChange={(e) => {
-                              const newExp = [...(data.experience || [])];
-                              const newProjects = [...(exp.projects || [])];
-                              newProjects[pIndex] = {
-                                ...project,
-                                technologies: e.target.value
-                                  .split(",")
-                                  .map((t) => t.trim()),
-                              };
-                              newExp[index] = { ...exp, projects: newProjects };
-                              updateData({ experience: newExp });
-                            }}
-                          />
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              const newExp = [...(data.experience || [])];
-                              const newProjects =
-                                exp.projects?.filter((_, i) => i !== pIndex) ||
-                                [];
-                              newExp[index] = { ...exp, projects: newProjects };
-                              updateData({ experience: newExp });
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" /> Remove Project
-                          </Button>
+                          {msg}
                         </div>
                       ))}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const newExp = [...(data.experience || [])];
-                          const newProjects = [
-                            ...(exp.projects || []),
-                            {
-                              name: "",
-                              description: "",
-                              technologies: [],
-                            },
-                          ];
-                          newExp[index] = { ...exp, projects: newProjects };
-                          updateData({ experience: newExp });
-                        }}
-                      >
-                        <Plus className="h-4 w-4 mr-2" /> Add Project
-                      </Button>
                     </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    className="mt-4"
-                    onClick={() => removeArrayItem("experience", index)}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" /> Remove Experience
-                  </Button>
-                </div>
-              ))}
-              <Button
-                variant="outline"
-                onClick={() =>
-                  addArrayItem("experience", {
-                    company: "",
-                    position: "",
-                    startDate: "",
-                    endDate: "",
-                    summary: "",
-                    projects: [],
-                  })
-                }
-              >
-                <Plus className="h-4 w-4 mr-2" /> Add Experience
-              </Button>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
+                  )}
 
-        <AccordionItem value="projects">
-          <AccordionTrigger>Personal Projects</AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-4 pt-4">
-              {data.projects?.map((project, index) => (
-                <div key={index} className="border rounded-lg p-4 space-y-4">
-                  <Input
-                    placeholder="Project Name"
-                    value={project.name}
-                    onChange={(e) => {
-                      const newProjects = [...(data.projects || [])];
-                      newProjects[index] = { ...project, name: e.target.value };
-                      updateData({ projects: newProjects });
-                    }}
-                  />
-                  <Textarea
-                    placeholder="Project Description"
-                    value={project.description}
-                    onChange={(e) => {
-                      const newProjects = [...(data.projects || [])];
-                      newProjects[index] = {
-                        ...project,
-                        description: e.target.value,
-                      };
-                      updateData({ projects: newProjects });
-                    }}
-                  />
-                  <Input
-                    placeholder="Technologies (comma-separated)"
-                    value={project.technologies.join(", ")}
-                    onChange={(e) => {
-                      const newProjects = [...(data.projects || [])];
-                      newProjects[index] = {
-                        ...project,
-                        technologies: e.target.value
-                          .split(",")
-                          .map((t) => t.trim()),
-                      };
-                      updateData({ projects: newProjects });
-                    }}
-                  />
-                  <div className="grid grid-cols-2 gap-4">
-                    <Input
-                      placeholder="GitHub URL"
-                      value={project.github || ""}
-                      onChange={(e) => {
-                        const newProjects = [...(data.projects || [])];
-                        newProjects[index] = {
-                          ...project,
-                          github: e.target.value,
-                        };
-                        updateData({ projects: newProjects });
-                      }}
-                    />
-                    <Input
-                      placeholder="Project URL"
-                      value={project.url || ""}
-                      onChange={(e) => {
-                        const newProjects = [...(data.projects || [])];
-                        newProjects[index] = {
-                          ...project,
-                          url: e.target.value,
-                        };
-                        updateData({ projects: newProjects });
-                      }}
-                    />
-                  </div>
-                  <Button
-                    variant="ghost"
-                    onClick={() => removeArrayItem("projects", index)}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" /> Remove Project
-                  </Button>
+                  {jsonOutput && (
+                    <>
+                      <Separator />
+                      <div className="font-mono text-sm whitespace-pre-wrap p-2 bg-slate-50 rounded border">
+                        {jsonOutput}
+                      </div>
+                    </>
+                  )}
+
+                  {!generating && !progressMessages.length && !jsonOutput && (
+                    <div className="flex items-center justify-center h-full py-12 text-muted-foreground">
+                      Click "Generate CV" to start the generation process
+                    </div>
+                  )}
                 </div>
-              ))}
-              <Button
-                variant="outline"
-                onClick={() =>
-                  addArrayItem("projects", {
-                    name: "",
-                    description: "",
-                    technologies: [],
-                    github: "",
-                    url: "",
-                  })
-                }
-              >
-                <Plus className="h-4 w-4 mr-2" /> Add Project
-              </Button>
+              </ScrollArea>
             </div>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
