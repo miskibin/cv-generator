@@ -3,9 +3,20 @@ import { CVData, Education, Experience, Project } from "@/types/cv";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, X } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  X,
+  User,
+  FileText,
+  Briefcase,
+  GraduationCap,
+  FolderGit2,
+  Languages,
+  Sparkles,
+  ExternalLink,
+  Github,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Accordion,
@@ -39,145 +50,7 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
     setNewSkill("");
   };
 
-  // Handle skill deletion
-  const removeSkill = (index: number) => {
-    const updatedSkills = [...(formData.skills || [])];
-    updatedSkills.splice(index, 1);
-    handleChange("skills", updatedSkills);
-  };
-
-  // Handle language addition
-  const addLanguage = () => {
-    if (!languageName.trim() || !languageLevel.trim()) return;
-    const updatedLanguages = { ...(formData.languages || {}) };
-    updatedLanguages[languageName] = languageLevel;
-    handleChange("languages", updatedLanguages);
-    setLanguageName("");
-    setLanguageLevel("");
-  };
-
-  // Handle language deletion
-  const removeLanguage = (lang: string) => {
-    const updatedLanguages = { ...(formData.languages || {}) };
-    delete updatedLanguages[lang];
-    handleChange("languages", updatedLanguages);
-  };
-
-  // Handle education items
-  const addEducation = () => {
-    const newEducation: Education = {
-      institution: "",
-      degree: "",
-      graduationDate: "",
-    };
-    handleChange("education", [...(formData.education || []), newEducation]);
-  };
-
-  const updateEducation = (
-    index: number,
-    field: keyof Education,
-    value: string
-  ) => {
-    const updatedEducation = [...(formData.education || [])];
-    updatedEducation[index] = { ...updatedEducation[index], [field]: value };
-    handleChange("education", updatedEducation);
-  };
-
-  const removeEducation = (index: number) => {
-    const updatedEducation = [...(formData.education || [])];
-    updatedEducation.splice(index, 1);
-    handleChange("education", updatedEducation);
-  };
-
-  // Handle experience items
-  const addExperience = () => {
-    const newExperience: Experience = {
-      company: "",
-      position: "",
-      startDate: "",
-      endDate: "",
-      summary: "",
-    };
-    handleChange("experience", [...(formData.experience || []), newExperience]);
-  };
-
-  const updateExperience = (
-    index: number,
-    field: keyof Experience,
-    value: any
-  ) => {
-    const updatedExperience = [...(formData.experience || [])];
-    updatedExperience[index] = { ...updatedExperience[index], [field]: value };
-    handleChange("experience", updatedExperience);
-  };
-
-  const removeExperience = (index: number) => {
-    const updatedExperience = [...(formData.experience || [])];
-    updatedExperience.splice(index, 1);
-    handleChange("experience", updatedExperience);
-  };
-
-  // Handle projects within experience
-  const addProjectToExperience = (expIndex: number) => {
-    const updatedExperience = [...(formData.experience || [])];
-    const newProject: Project = {
-      name: "",
-      description: "",
-      technologies: [],
-    };
-    updatedExperience[expIndex].projects = [
-      ...(updatedExperience[expIndex].projects || []),
-      newProject,
-    ];
-    handleChange("experience", updatedExperience);
-  };
-
-  const updateExperienceProject = (
-    expIndex: number,
-    projIndex: number,
-    field: keyof Project,
-    value: any
-  ) => {
-    const updatedExperience = [...(formData.experience || [])];
-    if (!updatedExperience[expIndex].projects) {
-      updatedExperience[expIndex].projects = [];
-    }
-    updatedExperience[expIndex].projects![projIndex] = {
-      ...updatedExperience[expIndex].projects![projIndex],
-      [field]: value,
-    };
-    handleChange("experience", updatedExperience);
-  };
-
-  const removeExperienceProject = (expIndex: number, projIndex: number) => {
-    const updatedExperience = [...(formData.experience || [])];
-    updatedExperience[expIndex].projects!.splice(projIndex, 1);
-    handleChange("experience", updatedExperience);
-  };
-
-  // Handle standalone projects
-  const addProject = () => {
-    const newProject: Project = {
-      name: "",
-      description: "",
-      technologies: [],
-    };
-    handleChange("projects", [...(formData.projects || []), newProject]);
-  };
-
-  const updateProject = (index: number, field: keyof Project, value: any) => {
-    const updatedProjects = [...(formData.projects || [])];
-    updatedProjects[index] = { ...updatedProjects[index], [field]: value };
-    handleChange("projects", updatedProjects);
-  };
-
-  const removeProject = (index: number) => {
-    const updatedProjects = [...(formData.projects || [])];
-    updatedProjects.splice(index, 1);
-    handleChange("projects", updatedProjects);
-  };
-
-  // Handle project technologies
+  // Handle technology inputs (using prompt)
   const addTechnology = (
     projIndex: number,
     isExperienceProject: boolean = false,
@@ -202,616 +75,685 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
     }
   };
 
-  const removeTechnology = (
-    projIndex: number,
-    techIndex: number,
-    isExperienceProject: boolean = false,
-    expIndex?: number
-  ) => {
-    if (isExperienceProject && expIndex !== undefined) {
-      const updatedExperience = [...(formData.experience || [])];
-      updatedExperience[expIndex].projects![projIndex].technologies.splice(
-        techIndex,
-        1
-      );
-      handleChange("experience", updatedExperience);
-    } else {
-      const updatedProjects = [...(formData.projects || [])];
-      updatedProjects[projIndex].technologies.splice(techIndex, 1);
-      handleChange("projects", updatedProjects);
-    }
-  };
-
   return (
-    <div className="space-y-6 pb-6">
-      {/* Personal Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Personal Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="firstName">First Name</Label>
+    <div className="space-y-4">
+      <Accordion type="single" collapsible className="w-full">
+        {/* Personal Information */}
+        <AccordionItem value="personal" className="mb-2">
+          <AccordionTrigger className="px-3 py-2 hover:bg-slate-50 group">
+            <span className="flex items-center text-sm font-medium">
+              <User className="h-4 w-4 mr-2 text-slate-500 group-hover:text-slate-700" />
+              Personal Information
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="bg-slate-50 p-3 pt-2 border-t space-y-3">
+            <div className="grid grid-cols-2 gap-3">
               <Input
-                id="firstName"
+                placeholder="First Name"
                 value={formData.firstName || ""}
                 onChange={(e) => handleChange("firstName", e.target.value)}
-                placeholder="John"
+                className="h-9"
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Last Name</Label>
               <Input
-                id="lastName"
+                placeholder="Last Name"
                 value={formData.lastName || ""}
                 onChange={(e) => handleChange("lastName", e.target.value)}
-                placeholder="Doe"
+                className="h-9"
               />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
             <Input
-              id="email"
+              placeholder="Email"
               type="email"
               value={formData.email || ""}
               onChange={(e) => handleChange("email", e.target.value)}
-              placeholder="john.doe@example.com"
+              className="h-9"
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
             <Input
-              id="phone"
+              placeholder="Phone Number"
               value={formData.phone || ""}
               onChange={(e) => handleChange("phone", e.target.value)}
-              placeholder="+1 (123) 456-7890"
+              className="h-9"
             />
-          </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                placeholder="GitHub Username"
+                value={formData.github || ""}
+                onChange={(e) => handleChange("github", e.target.value)}
+                className="h-9"
+              />
+              <Input
+                placeholder="LinkedIn Username"
+                value={formData.linkedin || ""}
+                onChange={(e) => handleChange("linkedin", e.target.value)}
+                className="h-9"
+              />
+            </div>
+          </AccordionContent>
+        </AccordionItem>
 
-          <div className="space-y-2">
-            <Label htmlFor="github">GitHub</Label>
-            <Input
-              id="github"
-              value={formData.github || ""}
-              onChange={(e) => handleChange("github", e.target.value)}
-              placeholder="username or https://github.com/username"
+        {/* About */}
+        <AccordionItem value="about" className="mb-2">
+          <AccordionTrigger className="px-3 py-2 hover:bg-slate-50 group">
+            <span className="flex items-center text-sm font-medium">
+              <FileText className="h-4 w-4 mr-2 text-slate-500 group-hover:text-slate-700" />
+              About Me
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="p-3 pt-2 border-t">
+            <Textarea
+              value={formData.about || ""}
+              onChange={(e) => handleChange("about", e.target.value)}
+              placeholder="Write a brief summary about yourself..."
+              rows={3}
+              className="resize-none"
             />
-          </div>
+          </AccordionContent>
+        </AccordionItem>
 
-          <div className="space-y-2">
-            <Label htmlFor="linkedin">LinkedIn</Label>
-            <Input
-              id="linkedin"
-              value={formData.linkedin || ""}
-              onChange={(e) => handleChange("linkedin", e.target.value)}
-              placeholder="username or https://linkedin.com/in/username"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* About Me */}
-      <Card>
-        <CardHeader>
-          <CardTitle>About Me</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Textarea
-            value={formData.about || ""}
-            onChange={(e) => handleChange("about", e.target.value)}
-            placeholder="Write a brief summary about yourself..."
-            rows={4}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Skills */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Skills</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <Input
-              value={newSkill}
-              onChange={(e) => setNewSkill(e.target.value)}
-              placeholder="Add a skill (e.g., JavaScript, React)"
-              onKeyPress={(e) => e.key === "Enter" && addSkill()}
-            />
-            <Button type="button" onClick={addSkill}>
-              Add
-            </Button>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {formData.skills?.map((skill, index) => (
-              <Badge key={index} className="px-2 py-1">
-                {skill}
-                <button
-                  type="button"
-                  onClick={() => removeSkill(index)}
-                  className="ml-2 hover:text-red-500"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Languages */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Languages</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <Input
-              value={languageName}
-              onChange={(e) => setLanguageName(e.target.value)}
-              placeholder="Language (e.g., English)"
-              className="flex-1"
-            />
-            <Input
-              value={languageLevel}
-              onChange={(e) => setLanguageLevel(e.target.value)}
-              placeholder="Level (e.g., Fluent)"
-              className="flex-1"
-            />
-            <Button type="button" onClick={addLanguage}>
-              Add
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            {formData.languages &&
-              Object.entries(formData.languages).map(([lang, level], index) => (
+        {/* Skills */}
+        <AccordionItem value="skills" className="mb-2">
+          <AccordionTrigger className="px-3 py-2 hover:bg-slate-50 group">
+            <span className="flex items-center text-sm font-medium">
+              <Sparkles className="h-4 w-4 mr-2 text-slate-500 group-hover:text-slate-700" />
+              Skills
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="p-3 pt-2 border-t space-y-3">
+            <div className="flex items-center gap-2">
+              <Input
+                value={newSkill}
+                onChange={(e) => setNewSkill(e.target.value)}
+                placeholder="Add a skill..."
+                className="flex-1 h-9"
+                onKeyPress={(e) => e.key === "Enter" && addSkill()}
+              />
+              <Button
+                type="button"
+                onClick={addSkill}
+                size="sm"
+                variant="outline"
+              >
+                Add
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {formData.skills?.map((skill, index) => (
                 <Badge
                   key={index}
-                  className="px-2 py-1 flex justify-between items-center"
+                  variant="secondary"
+                  className="py-0.5 pl-2 pr-1 flex items-center gap-1 bg-slate-100"
                 >
-                  <span>
-                    {lang}: {level}
-                  </span>
+                  {skill}
                   <button
                     type="button"
-                    onClick={() => removeLanguage(lang)}
-                    className="ml-2 hover:text-red-500"
+                    onClick={() => {
+                      const updatedSkills = [...(formData.skills || [])];
+                      updatedSkills.splice(index, 1);
+                      handleChange("skills", updatedSkills);
+                    }}
+                    className="rounded-full hover:bg-slate-200 p-0.5"
                   >
                     <X className="h-3 w-3" />
                   </button>
                 </Badge>
               ))}
-          </div>
-        </CardContent>
-      </Card>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
 
-      {/* Education */}
-      <Accordion type="multiple" className="w-full">
-        <AccordionItem value="education" className="border rounded-md">
-          <AccordionTrigger className="px-4 py-2 font-semibold">
-            Education
+        {/* Languages */}
+        <AccordionItem value="languages" className="mb-2">
+          <AccordionTrigger className="px-3 py-2 hover:bg-slate-50 group">
+            <span className="flex items-center text-sm font-medium">
+              <Languages className="h-4 w-4 mr-2 text-slate-500 group-hover:text-slate-700" />
+              Languages
+            </span>
           </AccordionTrigger>
-          <AccordionContent className="p-4 pt-0 border-t space-y-3">
+          <AccordionContent className="p-3 pt-2 border-t space-y-3">
+            <div className="flex items-center gap-2">
+              <Input
+                value={languageName}
+                onChange={(e) => setLanguageName(e.target.value)}
+                placeholder="Language name"
+                className="flex-1 h-9"
+              />
+              <Input
+                value={languageLevel}
+                onChange={(e) => setLanguageLevel(e.target.value)}
+                placeholder="Proficiency level"
+                className="flex-1 h-9"
+              />
+              <Button
+                type="button"
+                onClick={() => {
+                  if (!languageName.trim() || !languageLevel.trim()) return;
+                  const updatedLanguages = { ...(formData.languages || {}) };
+                  updatedLanguages[languageName] = languageLevel;
+                  handleChange("languages", updatedLanguages);
+                  setLanguageName("");
+                  setLanguageLevel("");
+                }}
+                size="sm"
+                variant="outline"
+              >
+                Add
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5">
+              {formData.languages &&
+                Object.entries(formData.languages).map(([lang, level], i) => (
+                  <Badge
+                    key={i}
+                    variant="secondary"
+                    className="py-0.5 pl-2 pr-1 flex items-center gap-1 bg-slate-100"
+                  >
+                    {lang}: {level}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updatedLanguages = {
+                          ...(formData.languages || {}),
+                        };
+                        delete updatedLanguages[lang];
+                        handleChange("languages", updatedLanguages);
+                      }}
+                      className="rounded-full hover:bg-slate-200 p-0.5"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Education */}
+        <AccordionItem value="education" className="mb-2">
+          <AccordionTrigger className="px-3 py-2 hover:bg-slate-50 group">
+            <span className="flex items-center text-sm font-medium">
+              <GraduationCap className="h-4 w-4 mr-2 text-slate-500 group-hover:text-slate-700" />
+              Education
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="p-3 pt-2 border-t space-y-3">
             <Button
               type="button"
-              onClick={addEducation}
-              className="w-full mt-3"
+              onClick={() => {
+                const newEducation = {
+                  institution: "",
+                  degree: "",
+                  graduationDate: "",
+                };
+                handleChange("education", [
+                  ...(formData.education || []),
+                  newEducation,
+                ]);
+              }}
+              variant="outline"
+              size="sm"
+              className="w-full"
             >
-              <Plus className="mr-2 h-4 w-4" /> Add Education
+              <Plus className="h-3.5 w-3.5 mr-1" /> Add Education
             </Button>
 
             {formData.education?.map((edu, index) => (
-              <Card key={index} className="relative">
-                <Button
+              <div
+                key={index}
+                className="relative border rounded-md p-3 bg-slate-50"
+              >
+                <button
                   type="button"
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => removeEducation(index)}
-                  className="absolute right-2 top-2 h-6 w-6 text-gray-500 hover:text-red-500"
+                  onClick={() => {
+                    const updatedEducation = [...(formData.education || [])];
+                    updatedEducation.splice(index, 1);
+                    handleChange("education", updatedEducation);
+                  }}
+                  className="absolute right-2 top-2 rounded-full p-1 hover:bg-slate-200"
                 >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
 
-                <CardContent className="p-4 space-y-3">
-                  <div className="space-y-2">
-                    <Label>Institution</Label>
-                    <Input
-                      value={edu.institution}
-                      onChange={(e) =>
-                        updateEducation(index, "institution", e.target.value)
-                      }
-                      placeholder="University or School Name"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Degree</Label>
-                    <Input
-                      value={edu.degree}
-                      onChange={(e) =>
-                        updateEducation(index, "degree", e.target.value)
-                      }
-                      placeholder="e.g., Bachelor of Science in Computer Science"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Graduation Date</Label>
-                    <Input
-                      value={edu.graduationDate}
-                      onChange={(e) =>
-                        updateEducation(index, "graduationDate", e.target.value)
-                      }
-                      placeholder="e.g., June 2020"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+                <div className="grid gap-2">
+                  <Input
+                    value={edu.institution}
+                    onChange={(e) => {
+                      const updatedEducation = [...(formData.education || [])];
+                      updatedEducation[index].institution = e.target.value;
+                      handleChange("education", updatedEducation);
+                    }}
+                    placeholder="Institution"
+                    className="h-8 text-sm"
+                  />
+                  <Input
+                    value={edu.degree}
+                    onChange={(e) => {
+                      const updatedEducation = [...(formData.education || [])];
+                      updatedEducation[index].degree = e.target.value;
+                      handleChange("education", updatedEducation);
+                    }}
+                    placeholder="Degree"
+                    className="h-8 text-sm"
+                  />
+                  <Input
+                    value={edu.graduationDate}
+                    onChange={(e) => {
+                      const updatedEducation = [...(formData.education || [])];
+                      updatedEducation[index].graduationDate = e.target.value;
+                      handleChange("education", updatedEducation);
+                    }}
+                    placeholder="Graduation Date"
+                    className="h-8 text-sm"
+                  />
+                </div>
+              </div>
             ))}
           </AccordionContent>
         </AccordionItem>
-      </Accordion>
 
-      {/* Experience */}
-      <Accordion type="multiple" className="w-full">
-        <AccordionItem value="experience" className="border rounded-md">
-          <AccordionTrigger className="px-4 py-2 font-semibold">
-            Professional Experience
+        {/* Experience */}
+        <AccordionItem value="experience" className="mb-2">
+          <AccordionTrigger className="px-3 py-2 hover:bg-slate-50 group">
+            <span className="flex items-center text-sm font-medium">
+              <Briefcase className="h-4 w-4 mr-2 text-slate-500 group-hover:text-slate-700" />
+              Professional Experience
+            </span>
           </AccordionTrigger>
-          <AccordionContent className="p-4 pt-0 border-t space-y-3">
+          <AccordionContent className="p-3 pt-2 border-t space-y-3">
             <Button
               type="button"
-              onClick={addExperience}
-              className="w-full mt-3"
+              onClick={() => {
+                const newExperience = {
+                  company: "",
+                  position: "",
+                  startDate: "",
+                  endDate: "",
+                  summary: "",
+                };
+                handleChange("experience", [
+                  ...(formData.experience || []),
+                  newExperience,
+                ]);
+              }}
+              variant="outline"
+              size="sm"
+              className="w-full"
             >
-              <Plus className="mr-2 h-4 w-4" /> Add Experience
+              <Plus className="h-3.5 w-3.5 mr-1" /> Add Experience
             </Button>
 
             {formData.experience?.map((exp, expIndex) => (
-              <Card key={expIndex} className="relative">
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => removeExperience(expIndex)}
-                  className="absolute right-2 top-2 h-6 w-6 text-gray-500 hover:text-red-500"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+              <div
+                key={expIndex}
+                className="border rounded-md p-3 space-y-3 bg-slate-50"
+              >
+                <div className="flex justify-between items-center">
+                  <h4 className="text-sm font-medium">
+                    {exp.position ? exp.position : "New Position"}
+                    {exp.company ? ` at ${exp.company}` : ""}
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updatedExperience = [
+                        ...(formData.experience || []),
+                      ];
+                      updatedExperience.splice(expIndex, 1);
+                      handleChange("experience", updatedExperience);
+                    }}
+                    className="rounded-full p-1 hover:bg-slate-200"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
 
-                <CardContent className="p-4 space-y-3">
-                  <div className="space-y-2">
-                    <Label>Company</Label>
+                <div className="grid gap-2">
+                  <Input
+                    value={exp.company}
+                    onChange={(e) => {
+                      const updatedExperience = [
+                        ...(formData.experience || []),
+                      ];
+                      updatedExperience[expIndex].company = e.target.value;
+                      handleChange("experience", updatedExperience);
+                    }}
+                    placeholder="Company"
+                    className="h-8 text-sm"
+                  />
+                  <Input
+                    value={exp.position}
+                    onChange={(e) => {
+                      const updatedExperience = [
+                        ...(formData.experience || []),
+                      ];
+                      updatedExperience[expIndex].position = e.target.value;
+                      handleChange("experience", updatedExperience);
+                    }}
+                    placeholder="Position"
+                    className="h-8 text-sm"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
                     <Input
-                      value={exp.company}
-                      onChange={(e) =>
-                        updateExperience(expIndex, "company", e.target.value)
-                      }
-                      placeholder="Company Name"
+                      value={exp.startDate}
+                      onChange={(e) => {
+                        const updatedExperience = [
+                          ...(formData.experience || []),
+                        ];
+                        updatedExperience[expIndex].startDate = e.target.value;
+                        handleChange("experience", updatedExperience);
+                      }}
+                      placeholder="Start Date"
+                      className="h-8 text-sm"
                     />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Position</Label>
                     <Input
-                      value={exp.position}
-                      onChange={(e) =>
-                        updateExperience(expIndex, "position", e.target.value)
-                      }
-                      placeholder="Your Job Title"
+                      value={exp.endDate}
+                      onChange={(e) => {
+                        const updatedExperience = [
+                          ...(formData.experience || []),
+                        ];
+                        updatedExperience[expIndex].endDate = e.target.value;
+                        handleChange("experience", updatedExperience);
+                      }}
+                      placeholder="End Date"
+                      className="h-8 text-sm"
                     />
                   </div>
+                  <Textarea
+                    value={exp.summary || ""}
+                    onChange={(e) => {
+                      const updatedExperience = [
+                        ...(formData.experience || []),
+                      ];
+                      updatedExperience[expIndex].summary = e.target.value;
+                      handleChange("experience", updatedExperience);
+                    }}
+                    placeholder="Summary of your role"
+                    className="text-sm resize-none"
+                    rows={2}
+                  />
+                </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label>Start Date</Label>
-                      <Input
-                        value={exp.startDate}
-                        onChange={(e) =>
-                          updateExperience(
-                            expIndex,
-                            "startDate",
-                            e.target.value
-                          )
-                        }
-                        placeholder="e.g., March 2018"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>End Date</Label>
-                      <Input
-                        value={exp.endDate}
-                        onChange={(e) =>
-                          updateExperience(expIndex, "endDate", e.target.value)
-                        }
-                        placeholder="e.g., Present"
-                      />
-                    </div>
+                {/* Project section */}
+                <div className="pt-2">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs text-slate-600">Projects</span>
+                    <Button
+                      type="button"
+                      size="xs"
+                      variant="ghost"
+                      onClick={() => {
+                        const updatedExperience = [
+                          ...(formData.experience || []),
+                        ];
+                        const newProject = {
+                          name: "",
+                          description: "",
+                          technologies: [],
+                        };
+                        updatedExperience[expIndex].projects = [
+                          ...(updatedExperience[expIndex].projects || []),
+                          newProject,
+                        ];
+                        handleChange("experience", updatedExperience);
+                      }}
+                      className="h-6 text-xs px-2"
+                    >
+                      <Plus className="h-3 w-3 mr-1" /> Add
+                    </Button>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Summary</Label>
-                    <Textarea
-                      value={exp.summary || ""}
-                      onChange={(e) =>
-                        updateExperience(expIndex, "summary", e.target.value)
-                      }
-                      placeholder="Describe your responsibilities and achievements"
-                      rows={3}
-                    />
-                  </div>
-
-                  {/* Projects within experience */}
-                  <div className="border-t pt-3 mt-3">
-                    <div className="flex justify-between items-center mb-3">
-                      <h4 className="font-medium">Projects at this company</h4>
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => addProjectToExperience(expIndex)}
-                      >
-                        <Plus className="mr-1 h-3 w-3" /> Add Project
-                      </Button>
-                    </div>
-
-                    <div className="space-y-3">
-                      {exp.projects?.map((project, projIndex) => (
-                        <Card key={projIndex} className="relative">
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            onClick={() =>
-                              removeExperienceProject(expIndex, projIndex)
-                            }
-                            className="absolute right-1 top-1 h-5 w-5 text-gray-500 hover:text-red-500"
+                  {exp.projects?.map((project, projIndex) => (
+                    <div
+                      key={projIndex}
+                      className="mb-2 border border-slate-200 rounded p-2 bg-white"
+                    >
+                      <div className="flex justify-between items-center mb-1.5">
+                        <span className="text-xs font-medium">
+                          {project.name || "New Project"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updatedExperience = [
+                              ...(formData.experience || []),
+                            ];
+                            updatedExperience[expIndex].projects!.splice(
+                              projIndex,
+                              1
+                            );
+                            handleChange("experience", updatedExperience);
+                          }}
+                          className="rounded-full hover:bg-slate-100 p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                      <Input
+                        value={project.name}
+                        onChange={(e) => {
+                          const updatedExperience = [
+                            ...(formData.experience || []),
+                          ];
+                          updatedExperience[expIndex].projects![
+                            projIndex
+                          ].name = e.target.value;
+                          handleChange("experience", updatedExperience);
+                        }}
+                        placeholder="Project Name"
+                        className="h-7 text-xs mb-1"
+                      />
+                      <Textarea
+                        value={project.description}
+                        onChange={(e) => {
+                          const updatedExperience = [
+                            ...(formData.experience || []),
+                          ];
+                          updatedExperience[expIndex].projects![
+                            projIndex
+                          ].description = e.target.value;
+                          handleChange("experience", updatedExperience);
+                        }}
+                        placeholder="Description"
+                        className="text-xs mb-1 resize-none h-12"
+                        rows={1}
+                      />
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-slate-600">
+                          Technologies
+                        </span>
+                        <Button
+                          type="button"
+                          size="xs"
+                          variant="ghost"
+                          onClick={() =>
+                            addTechnology(projIndex, true, expIndex)
+                          }
+                          className="h-5 text-xs px-2"
+                        >
+                          <Plus className="h-2.5 w-2.5 mr-1" /> Add
+                        </Button>
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {project.technologies?.map((tech, techIndex) => (
+                          <Badge
+                            key={techIndex}
+                            variant="outline"
+                            className="py-0 px-1 text-xs bg-slate-50"
                           >
-                            <X className="h-3 w-3" />
-                          </Button>
-
-                          <CardContent className="p-3 space-y-2">
-                            <div className="space-y-1">
-                              <Label className="text-xs">Project Name</Label>
-                              <Input
-                                value={project.name}
-                                onChange={(e) =>
-                                  updateExperienceProject(
-                                    expIndex,
-                                    projIndex,
-                                    "name",
-                                    e.target.value
-                                  )
-                                }
-                                placeholder="Project Name"
-                                className="h-8 text-sm"
-                              />
-                            </div>
-
-                            <div className="space-y-1">
-                              <Label className="text-xs">Description</Label>
-                              <Textarea
-                                value={project.description}
-                                onChange={(e) =>
-                                  updateExperienceProject(
-                                    expIndex,
-                                    projIndex,
-                                    "description",
-                                    e.target.value
-                                  )
-                                }
-                                placeholder="Brief description"
-                                className="text-sm"
-                                rows={2}
-                              />
-                            </div>
-
-                            <div className="space-y-1">
-                              <div className="flex justify-between items-center">
-                                <Label className="text-xs">Technologies</Label>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() =>
-                                    addTechnology(projIndex, true, expIndex)
-                                  }
-                                  className="h-6 text-xs"
-                                >
-                                  Add Tech
-                                </Button>
-                              </div>
-
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {project.technologies?.map(
-                                  (tech, techIndex) => (
-                                    <Badge
-                                      key={techIndex}
-                                      variant="secondary"
-                                      className="text-xs px-1"
-                                    >
-                                      {tech}
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          removeTechnology(
-                                            projIndex,
-                                            techIndex,
-                                            true,
-                                            expIndex
-                                          )
-                                        }
-                                        className="ml-1 hover:text-red-500"
-                                      >
-                                        <X className="h-2 w-2" />
-                                      </button>
-                                    </Badge>
-                                  )
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className="space-y-1">
-                                <Label className="text-xs">GitHub URL</Label>
-                                <Input
-                                  value={project.github || ""}
-                                  onChange={(e) =>
-                                    updateExperienceProject(
-                                      expIndex,
-                                      projIndex,
-                                      "github",
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder="GitHub URL"
-                                  className="h-8 text-sm"
-                                />
-                              </div>
-
-                              <div className="space-y-1">
-                                <Label className="text-xs">Project URL</Label>
-                                <Input
-                                  value={project.url || ""}
-                                  onChange={(e) =>
-                                    updateExperienceProject(
-                                      expIndex,
-                                      projIndex,
-                                      "url",
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder="Live URL"
-                                  className="h-8 text-sm"
-                                />
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                            {tech}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updatedExperience = [
+                                  ...(formData.experience || []),
+                                ];
+                                updatedExperience[expIndex].projects![
+                                  projIndex
+                                ].technologies.splice(techIndex, 1);
+                                handleChange("experience", updatedExperience);
+                              }}
+                              className="ml-1 hover:text-red-500"
+                            >
+                              <X className="h-2 w-2" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  ))}
+                </div>
+              </div>
             ))}
           </AccordionContent>
         </AccordionItem>
-      </Accordion>
 
-      {/* Standalone Projects */}
-      <Accordion type="multiple" className="w-full">
-        <AccordionItem value="projects" className="border rounded-md">
-          <AccordionTrigger className="px-4 py-2 font-semibold">
-            Projects
+        {/* Projects */}
+        <AccordionItem value="projects">
+          <AccordionTrigger className="px-3 py-2 hover:bg-slate-50 group">
+            <span className="flex items-center text-sm font-medium">
+              <FolderGit2 className="h-4 w-4 mr-2 text-slate-500 group-hover:text-slate-700" />
+              Projects
+            </span>
           </AccordionTrigger>
-          <AccordionContent className="p-4 pt-0 border-t space-y-3">
-            <Button type="button" onClick={addProject} className="w-full mt-3">
-              <Plus className="mr-2 h-4 w-4" /> Add Project
+          <AccordionContent className="p-3 pt-2 border-t space-y-3">
+            <Button
+              type="button"
+              onClick={() => {
+                const newProject = {
+                  name: "",
+                  description: "",
+                  technologies: [],
+                };
+                handleChange("projects", [
+                  ...(formData.projects || []),
+                  newProject,
+                ]);
+              }}
+              variant="outline"
+              size="sm"
+              className="w-full"
+            >
+              <Plus className="h-3.5 w-3.5 mr-1" /> Add Project
             </Button>
 
-            {formData.projects?.map((project, projIndex) => (
-              <Card key={projIndex} className="relative">
-                <Button
+            {formData.projects?.map((project, index) => (
+              <div
+                key={index}
+                className="relative border rounded-md p-3 bg-slate-50"
+              >
+                <button
                   type="button"
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => removeProject(projIndex)}
-                  className="absolute right-2 top-2 h-6 w-6 text-gray-500 hover:text-red-500"
+                  onClick={() => {
+                    const updatedProjects = [...(formData.projects || [])];
+                    updatedProjects.splice(index, 1);
+                    handleChange("projects", updatedProjects);
+                  }}
+                  className="absolute right-2 top-2 rounded-full p-1 hover:bg-slate-200"
                 >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
 
-                <CardContent className="p-4 space-y-3">
-                  <div className="space-y-2">
-                    <Label>Project Name</Label>
-                    <Input
-                      value={project.name}
-                      onChange={(e) =>
-                        updateProject(projIndex, "name", e.target.value)
-                      }
-                      placeholder="Project Name"
-                    />
+                <div className="grid gap-2">
+                  <Input
+                    value={project.name}
+                    onChange={(e) => {
+                      const updatedProjects = [...(formData.projects || [])];
+                      updatedProjects[index].name = e.target.value;
+                      handleChange("projects", updatedProjects);
+                    }}
+                    placeholder="Project Name"
+                    className="h-8 text-sm"
+                  />
+                  <Textarea
+                    value={project.description}
+                    onChange={(e) => {
+                      const updatedProjects = [...(formData.projects || [])];
+                      updatedProjects[index].description = e.target.value;
+                      handleChange("projects", updatedProjects);
+                    }}
+                    placeholder="Description"
+                    className="text-sm resize-none"
+                    rows={2}
+                  />
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="relative">
+                      <Input
+                        value={project.github || ""}
+                        onChange={(e) => {
+                          const updatedProjects = [
+                            ...(formData.projects || []),
+                          ];
+                          updatedProjects[index].github = e.target.value;
+                          handleChange("projects", updatedProjects);
+                        }}
+                        placeholder="GitHub URL"
+                        className="h-8 text-sm pl-7"
+                      />
+                      <Github className="absolute left-2 top-2 h-4 w-4 text-slate-400" />
+                    </div>
+                    <div className="relative">
+                      <Input
+                        value={project.url || ""}
+                        onChange={(e) => {
+                          const updatedProjects = [
+                            ...(formData.projects || []),
+                          ];
+                          updatedProjects[index].url = e.target.value;
+                          handleChange("projects", updatedProjects);
+                        }}
+                        placeholder="Live URL"
+                        className="h-8 text-sm pl-7"
+                      />
+                      <ExternalLink className="absolute left-2 top-2 h-4 w-4 text-slate-400" />
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Description</Label>
-                    <Textarea
-                      value={project.description}
-                      onChange={(e) =>
-                        updateProject(projIndex, "description", e.target.value)
-                      }
-                      placeholder="Describe your project"
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <Label>Technologies</Label>
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-xs text-slate-600">
+                        Technologies
+                      </span>
                       <Button
                         type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => addTechnology(projIndex)}
+                        size="xs"
+                        variant="ghost"
+                        onClick={() => addTechnology(index)}
+                        className="h-6 text-xs px-2"
                       >
-                        Add Tech
+                        <Plus className="h-3 w-3 mr-1" /> Add
                       </Button>
                     </div>
-
-                    <div className="flex flex-wrap gap-1 mt-1">
+                    <div className="flex flex-wrap gap-1">
                       {project.technologies?.map((tech, techIndex) => (
                         <Badge
                           key={techIndex}
-                          variant="secondary"
-                          className="px-2 py-1"
+                          variant="outline"
+                          className="py-0 px-1 text-xs bg-white"
                         >
                           {tech}
                           <button
                             type="button"
-                            onClick={() =>
-                              removeTechnology(projIndex, techIndex)
-                            }
+                            onClick={() => {
+                              const updatedProjects = [
+                                ...(formData.projects || []),
+                              ];
+                              updatedProjects[index].technologies.splice(
+                                techIndex,
+                                1
+                              );
+                              handleChange("projects", updatedProjects);
+                            }}
                             className="ml-1 hover:text-red-500"
                           >
-                            <X className="h-3 w-3" />
+                            <X className="h-2 w-2" />
                           </button>
                         </Badge>
                       ))}
                     </div>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label>GitHub URL</Label>
-                      <Input
-                        value={project.github || ""}
-                        onChange={(e) =>
-                          updateProject(projIndex, "github", e.target.value)
-                        }
-                        placeholder="GitHub URL"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Project URL</Label>
-                      <Input
-                        value={project.url || ""}
-                        onChange={(e) =>
-                          updateProject(projIndex, "url", e.target.value)
-                        }
-                        placeholder="Live URL"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
           </AccordionContent>
         </AccordionItem>
