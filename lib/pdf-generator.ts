@@ -653,7 +653,6 @@ function renderCV(
 
   // Footer
   applyStyle("muted");
-  const footer = `Generated with CV Generator - ${new Date().toLocaleDateString()}`;
   pdf.text(
     footer,
     (pageWidth - pdf.getTextWidth(footer)) / 2,

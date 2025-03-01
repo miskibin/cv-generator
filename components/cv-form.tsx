@@ -9,6 +9,7 @@ import {
   XCircle,
   FileEdit,
   MessageSquare,
+  Save,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -16,6 +17,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ManualCVForm } from "./manual-cv-form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface CVFormProps {
   onDataChange: (data: CVData) => void;
@@ -32,6 +40,9 @@ export function CVForm({ onDataChange, initialData }: CVFormProps) {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState("phi4");
+  const [models, setModels] = useState<string[]>([]);
+  const [modelLoading, setModelLoading] = useState(false);
 
   const abortController = useRef<AbortController | null>(null);
 
@@ -44,6 +55,34 @@ export function CVForm({ onDataChange, initialData }: CVFormProps) {
       }
     }
   }, [initialData]);
+
+  // Fetch available models from Ollama
+  useEffect(() => {
+    async function fetchModels() {
+      setModelLoading(true);
+      try {
+        const response = await fetch("/api/get-models");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.models && Array.isArray(data.models)) {
+            setModels(data.models);
+            // Set default model if available
+            if (data.models.length > 0 && data.models.includes("phi4")) {
+              setSelectedModel("phi4");
+            } else if (data.models.length > 0) {
+              setSelectedModel(data.models[0]);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load models:", error);
+      } finally {
+        setModelLoading(false);
+      }
+    }
+
+    fetchModels();
+  }, []);
 
   const clearForm = () => {
     setUserText("");
@@ -85,23 +124,29 @@ export function CVForm({ onDataChange, initialData }: CVFormProps) {
     setInputMode("ai");
   };
 
-  // Generate CV using either AI input or manual data
-  const generateCV = async () => {
-    // Validate inputs
-    if (inputMode === "ai" && !userText.trim()) {
-      setError("Please provide some information about yourself");
+  // Handle direct CV update from manual data
+  const updateCVFromManual = () => {
+    // Validate required fields
+    const requiredFields = ["firstName", "lastName", "email"];
+    const missingFields = requiredFields.filter(
+      (field) => !manualData[field as keyof CVData]
+    );
+
+    if (missingFields.length > 0) {
+      setError(`Please fill in: ${missingFields.join(", ")}`);
       return;
     }
 
-    if (inputMode === "manual") {
-      const requiredFields = ["firstName", "lastName", "email"];
-      const missingFields = requiredFields.filter(
-        (field) => !manualData[field as keyof CVData]
-      );
-      if (missingFields.length > 0) {
-        setError(`Please fill in: ${missingFields.join(", ")}`);
-        return;
-      }
+    setStatus("✅ CV updated successfully!");
+    onDataChange(manualData as CVData);
+  };
+
+  // Generate CV using AI
+  const generateCV = async () => {
+    // Validate inputs
+    if (!userText.trim()) {
+      setError("Please provide some information about yourself");
+      return;
     }
 
     setGenerating(true);
@@ -112,15 +157,14 @@ export function CVForm({ onDataChange, initialData }: CVFormProps) {
       if (abortController.current) abortController.current.abort();
       abortController.current = new AbortController();
 
-      const requestBody =
-        inputMode === "ai"
-          ? { text: userText, jobRequirements }
-          : { text: "", manualData, jobRequirements };
-
       const response = await fetch("/api/generate-cv", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({
+          text: userText,
+          jobRequirements,
+          model: selectedModel,
+        }),
         signal: abortController.current.signal,
       });
 
@@ -178,8 +222,7 @@ export function CVForm({ onDataChange, initialData }: CVFormProps) {
 
   return (
     <div className="flex flex-col h-full w-full">
-      <div className="flex justify-between items-center p-4 border-b bg-slate-50">
-        <h2 className="text-xl font-semibold">CV Generator</h2>
+      <div className="flex justify-end items-center p-4 border-b bg-slate-50">
         <div className="flex items-center space-x-2">
           <Badge
             variant={generating ? "secondary" : "outline"}
@@ -188,9 +231,18 @@ export function CVForm({ onDataChange, initialData }: CVFormProps) {
             {generating ? "Generating..." : "Ready"}
           </Badge>
           {!generating ? (
-            <Button onClick={generateCV} className="flex items-center gap-2">
-              <Wand2 className="h-4 w-4" /> Generate CV
-            </Button>
+            inputMode === "ai" ? (
+              <Button onClick={generateCV} className="flex items-center gap-2">
+                <Wand2 className="h-4 w-4" /> Generate CV
+              </Button>
+            ) : (
+              <Button
+                onClick={updateCVFromManual}
+                className="flex items-center gap-2"
+              >
+                <Save className="h-4 w-4" /> Update CV
+              </Button>
+            )
           ) : (
             <Button
               variant="destructive"
@@ -220,6 +272,35 @@ export function CVForm({ onDataChange, initialData }: CVFormProps) {
 
           <TabsContent value="ai" className="flex-1 overflow-auto">
             <div className="space-y-4">
+              <div className="flex justify-end mb-2">
+                <Select
+                  value={selectedModel}
+                  onValueChange={setSelectedModel}
+                  disabled={generating || modelLoading}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue
+                      placeholder={
+                        modelLoading ? "Loading models..." : "Select model"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {models.length > 0 ? (
+                      models.map((model) => (
+                        <SelectItem key={model} value={model}>
+                          {model}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="phi4" disabled>
+                        {modelLoading ? "Loading..." : "No models found"}
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <Textarea
                 placeholder="Tell me about your experience, education, skills, and contact information..."
                 value={userText}

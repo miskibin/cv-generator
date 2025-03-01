@@ -4,7 +4,12 @@ import { getTypeDefinitions } from "@/utils/typeToString";
 
 export async function POST(request: Request) {
   try {
-    const { text, manualData, jobRequirements } = await request.json();
+    const {
+      text,
+      manualData,
+      jobRequirements,
+      model = "phi4",
+    } = await request.json();
 
     // If we have manual data, use that directly with AI filling only the blanks
     const hasManualData = manualData && Object.keys(manualData).length > 0;
@@ -187,14 +192,14 @@ For dates, use formats like "June 2019" or "March 2022 - Present".
               )
             );
 
-            // Send request to Ollama
+            // Send request to Ollama with the selected model
             const ollamaResponse = await fetch(
               "http://localhost:11434/api/generate",
               {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  model: "phi4",
+                  model: model,
                   prompt,
                   stream: true,
                   options: {
