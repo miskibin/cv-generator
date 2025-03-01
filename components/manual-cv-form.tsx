@@ -79,14 +79,14 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
     <div className="space-y-4">
       <Accordion type="single" collapsible className="w-full">
         {/* Personal Information */}
-        <AccordionItem value="personal" className="mb-2">
+        <AccordionItem value="personal">
           <AccordionTrigger className="px-3 py-2 hover:bg-slate-50 group">
             <span className="flex items-center text-sm font-medium">
               <User className="h-4 w-4 mr-2 text-slate-500 group-hover:text-slate-700" />
               Personal Information
             </span>
           </AccordionTrigger>
-          <AccordionContent className="bg-slate-50 p-3 pt-2 border-t space-y-3">
+          <AccordionContent className="px-3 pt-2 pb-4 border-t space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <Input
                 placeholder="First Name"
@@ -132,14 +132,14 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
         </AccordionItem>
 
         {/* About */}
-        <AccordionItem value="about" className="mb-2">
+        <AccordionItem value="about">
           <AccordionTrigger className="px-3 py-2 hover:bg-slate-50 group">
             <span className="flex items-center text-sm font-medium">
               <FileText className="h-4 w-4 mr-2 text-slate-500 group-hover:text-slate-700" />
               About Me
             </span>
           </AccordionTrigger>
-          <AccordionContent className="p-3 pt-2 border-t">
+          <AccordionContent className="px-3 pt-2 pb-4 border-t">
             <Textarea
               value={formData.about || ""}
               onChange={(e) => handleChange("about", e.target.value)}
@@ -151,14 +151,14 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
         </AccordionItem>
 
         {/* Skills */}
-        <AccordionItem value="skills" className="mb-2">
+        <AccordionItem value="skills">
           <AccordionTrigger className="px-3 py-2 hover:bg-slate-50 group">
             <span className="flex items-center text-sm font-medium">
               <Sparkles className="h-4 w-4 mr-2 text-slate-500 group-hover:text-slate-700" />
               Skills
             </span>
           </AccordionTrigger>
-          <AccordionContent className="p-3 pt-2 border-t space-y-3">
+          <AccordionContent className="px-3 pt-2 pb-4 border-t space-y-3">
             <div className="flex items-center gap-2">
               <Input
                 value={newSkill}
@@ -181,7 +181,7 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
                 <Badge
                   key={index}
                   variant="secondary"
-                  className="py-0.5 pl-2 pr-1 flex items-center gap-1 bg-slate-100"
+                  className="py-0.5 pl-2 pr-1 flex items-center gap-1"
                 >
                   {skill}
                   <button
@@ -202,14 +202,14 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
         </AccordionItem>
 
         {/* Languages */}
-        <AccordionItem value="languages" className="mb-2">
+        <AccordionItem value="languages">
           <AccordionTrigger className="px-3 py-2 hover:bg-slate-50 group">
             <span className="flex items-center text-sm font-medium">
               <Languages className="h-4 w-4 mr-2 text-slate-500 group-hover:text-slate-700" />
               Languages
             </span>
           </AccordionTrigger>
-          <AccordionContent className="p-3 pt-2 border-t space-y-3">
+          <AccordionContent className="px-3 pt-2 pb-4 border-t space-y-3">
             <div className="flex items-center gap-2">
               <Input
                 value={languageName}
@@ -246,7 +246,7 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
                   <Badge
                     key={i}
                     variant="secondary"
-                    className="py-0.5 pl-2 pr-1 flex items-center gap-1 bg-slate-100"
+                    className="py-0.5 pl-2 pr-1 flex items-center gap-1"
                   >
                     {lang}: {level}
                     <button
@@ -269,14 +269,14 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
         </AccordionItem>
 
         {/* Education */}
-        <AccordionItem value="education" className="mb-2">
+        <AccordionItem value="education">
           <AccordionTrigger className="px-3 py-2 hover:bg-slate-50 group">
             <span className="flex items-center text-sm font-medium">
               <GraduationCap className="h-4 w-4 mr-2 text-slate-500 group-hover:text-slate-700" />
               Education
             </span>
           </AccordionTrigger>
-          <AccordionContent className="p-3 pt-2 border-t space-y-3">
+          <AccordionContent className="px-3 pt-2 pb-4 border-t space-y-3">
             <Button
               type="button"
               onClick={() => {
@@ -298,21 +298,23 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
             </Button>
 
             {formData.education?.map((edu, index) => (
-              <div
-                key={index}
-                className="relative border rounded-md p-3 bg-slate-50"
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    const updatedEducation = [...(formData.education || [])];
-                    updatedEducation.splice(index, 1);
-                    handleChange("education", updatedEducation);
-                  }}
-                  className="absolute right-2 top-2 rounded-full p-1 hover:bg-slate-200"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+              <div key={index} className="pt-2 mt-2 border-t">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium">
+                    {edu.institution ? edu.institution : "New Institution"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updatedEducation = [...(formData.education || [])];
+                      updatedEducation.splice(index, 1);
+                      handleChange("education", updatedEducation);
+                    }}
+                    className="rounded-full p-1 hover:bg-slate-100"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
 
                 <div className="grid gap-2">
                   <Input
@@ -352,14 +354,14 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
         </AccordionItem>
 
         {/* Experience */}
-        <AccordionItem value="experience" className="mb-2">
+        <AccordionItem value="experience">
           <AccordionTrigger className="px-3 py-2 hover:bg-slate-50 group">
             <span className="flex items-center text-sm font-medium">
               <Briefcase className="h-4 w-4 mr-2 text-slate-500 group-hover:text-slate-700" />
               Professional Experience
             </span>
           </AccordionTrigger>
-          <AccordionContent className="p-3 pt-2 border-t space-y-3">
+          <AccordionContent className="px-3 pt-2 pb-4 border-t space-y-3">
             <Button
               type="button"
               onClick={() => {
@@ -383,11 +385,8 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
             </Button>
 
             {formData.experience?.map((exp, expIndex) => (
-              <div
-                key={expIndex}
-                className="border rounded-md p-3 space-y-3 bg-slate-50"
-              >
-                <div className="flex justify-between items-center">
+              <div key={expIndex} className="pt-3 mt-2 border-t">
+                <div className="flex justify-between items-center mb-2">
                   <h4 className="text-sm font-medium">
                     {exp.position ? exp.position : "New Position"}
                     {exp.company ? ` at ${exp.company}` : ""}
@@ -401,7 +400,7 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
                       updatedExperience.splice(expIndex, 1);
                       handleChange("experience", updatedExperience);
                     }}
-                    className="rounded-full p-1 hover:bg-slate-200"
+                    className="rounded-full p-1 hover:bg-slate-100"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -474,7 +473,7 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
                 </div>
 
                 {/* Project section */}
-                <div className="pt-2">
+                <div className="pt-2 mt-2 border-t border-dashed">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-xs text-slate-600">Projects</span>
                     <Button
@@ -505,7 +504,7 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
                   {exp.projects?.map((project, projIndex) => (
                     <div
                       key={projIndex}
-                      className="mb-2 border border-slate-200 rounded p-2 bg-white"
+                      className="mb-3 pl-2 pb-2 border-l-2 border-slate-100"
                     >
                       <div className="flex justify-between items-center mb-1.5">
                         <span className="text-xs font-medium">
@@ -578,7 +577,7 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
                           <Badge
                             key={techIndex}
                             variant="outline"
-                            className="py-0 px-1 text-xs bg-slate-50"
+                            className="py-0 px-1 text-xs"
                           >
                             {tech}
                             <button
@@ -615,7 +614,7 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
               Projects
             </span>
           </AccordionTrigger>
-          <AccordionContent className="p-3 pt-2 border-t space-y-3">
+          <AccordionContent className="px-3 pt-2 pb-4 border-t space-y-3">
             <Button
               type="button"
               onClick={() => {
@@ -637,21 +636,23 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
             </Button>
 
             {formData.projects?.map((project, index) => (
-              <div
-                key={index}
-                className="relative border rounded-md p-3 bg-slate-50"
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    const updatedProjects = [...(formData.projects || [])];
-                    updatedProjects.splice(index, 1);
-                    handleChange("projects", updatedProjects);
-                  }}
-                  className="absolute right-2 top-2 rounded-full p-1 hover:bg-slate-200"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+              <div key={index} className="pt-3 mt-2 border-t">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium">
+                    {project.name || "New Project"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updatedProjects = [...(formData.projects || [])];
+                      updatedProjects.splice(index, 1);
+                      handleChange("projects", updatedProjects);
+                    }}
+                    className="rounded-full p-1 hover:bg-slate-100"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
 
                 <div className="grid gap-2">
                   <Input
@@ -729,7 +730,7 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
                         <Badge
                           key={techIndex}
                           variant="outline"
-                          className="py-0 px-1 text-xs bg-white"
+                          className="py-0 px-1 text-xs"
                         >
                           {tech}
                           <button

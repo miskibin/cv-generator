@@ -343,12 +343,6 @@ export function CVForm({ onDataChange, initialData }: CVFormProps) {
           >
             <XCircle className="h-3.5 w-3.5 mr-1" /> Clear All
           </Button>
-
-          {!generating && (
-            <Button onClick={generateCV} className="flex items-center gap-2">
-              <Wand2 className="h-4 w-4" /> Generate CV
-            </Button>
-          )}
         </div>
       </div>
     </div>

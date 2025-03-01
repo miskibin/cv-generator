@@ -34,12 +34,18 @@ Make the CV more relevant by:
 No specific job requirements provided. Create a general-purpose professional CV.
 `;
 
+    // Enhanced prompt for manual data - explicitly instructing to preserve structure and values
     const prompt = hasManualData
       ? `
 You are a CV assistant that helps complete professional CV data in JSON format.
-I have already filled in some data, but need you to enhance and complete the missing parts.
+I have already filled in some data manually, and I need you to PRESERVE ALL MY EXISTING DATA while enhancing only what's missing.
 
-ALREADY FILLED DATA:
+IMPORTANT: NEVER modify or remove any data I've already provided. Your job is only to:
+1. Fill in completely empty fields
+2. Enhance fields that need more detail WHILE keeping my original content
+3. If job requirements are provided, tailor additions to match those requirements
+
+MY MANUALLY ENTERED DATA (DO NOT CHANGE THIS):
 ${JSON.stringify(manualData, null, 2)}
 
 USER ADDITIONAL INFO:
@@ -51,11 +57,12 @@ Please generate a complete JSON object that follows this TypeScript interface:
 
 ${getTypeDefinitions()}
 
-Do NOT change or remove any data I've already provided!
-Only add missing information or enhance existing data to better match the job requirements.
-Only respond with valid, well-structured JSON that matches this format.
-Do not include any other text in your response.
-For dates, use formats like "June 2019" or "March 2022 - Present".
+INSTRUCTIONS:
+- Return ONLY valid, well-structured JSON that matches the TypeScript interface
+- For user-provided fields (education, experience, projects), maintain their exact structure and values
+- Only add new entries to arrays (like skills, education, etc.) if needed, don't modify existing ones
+- For dates, use formats like "June 2019" or "March 2022 - Present"
+- If I provided a field, even partially, preserve it exactly as is
 `
       : `
 You are a CV assistant that helps create professional CV data in JSON format.
@@ -81,12 +88,14 @@ For dates, use formats like "June 2019" or "March 2022 - Present".
       new ReadableStream({
         async start(controller) {
           try {
-            // Simple status update
-            const initialStatus = jobRequirements
-              ? "Tailoring your CV to match job requirements..."
-              : hasManualData
-              ? "Enhancing your CV data..."
-              : "Working on your CV...";
+            // More detailed status updates based on input mode
+            const initialStatus = hasManualData
+              ? jobRequirements
+                ? "Tailoring your manually entered CV to match job requirements..."
+                : "Enhancing your manually entered CV data..."
+              : jobRequirements
+              ? "Creating a tailored CV from your description..."
+              : "Creating your CV from description...";
 
             controller.enqueue(
               new TextEncoder().encode(
@@ -96,23 +105,68 @@ For dates, use formats like "June 2019" or "March 2022 - Present".
               )
             );
 
-            // If we only have manual data with required fields and no AI is needed,
-            // just return the manual data directly
-            if (
+            // Check if manual data is complete enough to skip AI processing
+            // This is a bit more sophisticated than before - checking for meaningful content
+            const isManualDataComplete =
               hasManualData &&
-              manualData.firstName &&
-              manualData.lastName &&
-              manualData.email &&
-              !text &&
-              !jobRequirements
-            ) {
+              manualData.firstName?.trim() &&
+              manualData.lastName?.trim() &&
+              manualData.email?.trim() &&
+              manualData.about?.trim() &&
+              (!jobRequirements || jobRequirements.trim() === "") &&
+              (manualData.skills?.length > 0 ||
+                manualData.experience?.length > 0 ||
+                manualData.projects?.length > 0);
+
+            if (isManualDataComplete && !text) {
+              // Show processing feedback
+              controller.enqueue(
+                new TextEncoder().encode(
+                  JSON.stringify({
+                    status: "Manual data is complete. Finalizing your CV...",
+                  }) + "\n"
+                )
+              );
+
               // Small delay to show processing
-              await new Promise((resolve) => setTimeout(resolve, 500));
+              await new Promise((resolve) => setTimeout(resolve, 700));
+
+              // Make a shallow copy to avoid reference issues
+              const processedData = JSON.parse(JSON.stringify(manualData));
+
+              // Apply minimal processing to ensure valid data structure
+              if (!processedData.skills) processedData.skills = [];
+              if (!processedData.languages) processedData.languages = {};
+
+              // Ensure projects have technologies array
+              if (processedData.projects) {
+                processedData.projects = processedData.projects.map(
+                  (project: any) => ({
+                    ...project,
+                    technologies: project.technologies || [],
+                  })
+                );
+              }
+
+              // Ensure experiences have consistent structure
+              if (processedData.experience) {
+                processedData.experience = processedData.experience.map(
+                  (exp: any) => ({
+                    ...exp,
+                    projects: exp.projects
+                      ? exp.projects.map((p: any) => ({
+                          ...p,
+                          technologies: p.technologies || [],
+                        }))
+                      : undefined,
+                  })
+                );
+              }
 
               controller.enqueue(
                 new TextEncoder().encode(
                   JSON.stringify({
-                    result: manualData,
+                    result: processedData,
                     status: "Complete",
                   }) + "\n"
                 )
@@ -122,6 +176,17 @@ For dates, use formats like "June 2019" or "March 2022 - Present".
               return;
             }
 
+            // Update status for AI processing
+            controller.enqueue(
+              new TextEncoder().encode(
+                JSON.stringify({
+                  status: hasManualData
+                    ? "Analyzing your data and enhancing your CV..."
+                    : "Creating your CV from scratch...",
+                }) + "\n"
+              )
+            );
+
             // Send request to Ollama
             const ollamaResponse = await fetch(
               "http://localhost:11434/api/generate",
@@ -129,10 +194,13 @@ For dates, use formats like "June 2019" or "March 2022 - Present".
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  model: "llama3.2",
+                  model: "phi4",
                   prompt,
                   stream: true,
-                  options: { temperature: 0.7, top_p: 0.9 },
+                  options: {
+                    temperature: hasManualData ? 0.4 : 0.7, // Lower temperature for manual data to be more conservative
+                    top_p: 0.9,
+                  },
                 }),
               }
             );
@@ -220,49 +288,118 @@ For dates, use formats like "June 2019" or "March 2022 - Present".
                 // Parse the extracted JSON
                 const cvData: CVData = JSON.parse(finalJson);
 
-                // Apply defaults only for missing fields
-                const enhancedData: CVData = {
-                  firstName: cvData.firstName?.trim() || "Anonymous",
-                  lastName: cvData.lastName?.trim() || "User",
-                  email: cvData.email?.trim() || "no-email@example.com",
-                  // Only include other fields if they exist
-                  ...(cvData.github ? { github: cvData.github } : {}),
-                  ...(cvData.phone ? { phone: cvData.phone } : {}),
-                  ...(cvData.linkedin ? { linkedin: cvData.linkedin } : {}),
-                  ...(cvData.about ? { about: cvData.about?.trim() } : {}),
-                  ...(cvData.skills ? { skills: cvData.skills } : {}),
-                  ...(cvData.languages ? { languages: cvData.languages } : {}),
+                // Create the final result - prioritizing manual data fields over AI-generated ones
+                let enhancedData: CVData;
 
-                  // Process projects if they exist
-                  ...(cvData.projects
-                    ? {
-                        projects: cvData.projects.map((p) => ({
-                          ...p,
-                          description:
-                            p.description || "No description provided",
-                          technologies: p.technologies || [],
-                        })),
-                      }
-                    : {}),
+                if (hasManualData) {
+                  // When we have manual data, use it as the base and carefully merge AI additions
+                  enhancedData = {
+                    // Start with manual data as the base
+                    ...manualData,
 
-                  // Process experience if it exists
-                  ...(cvData.experience
-                    ? {
-                        experience: cvData.experience.map((exp) => ({
-                          ...exp,
-                          projects: exp.projects?.map((p) => ({
+                    // Always ensure these fields exist
+                    firstName:
+                      manualData.firstName || cvData.firstName || "Anonymous",
+                    lastName: manualData.lastName || cvData.lastName || "User",
+                    email:
+                      manualData.email ||
+                      cvData.email ||
+                      "no-email@example.com",
+
+                    // Carefully merge AI-generated content for these fields
+                    about: manualData.about || cvData.about,
+
+                    // For skills, combine both but avoid duplicates
+                    skills: [
+                      ...(manualData.skills || []),
+                      ...(cvData.skills || []).filter(
+                        (skill) => !manualData.skills?.includes(skill)
+                      ),
+                    ],
+
+                    // For languages, prioritize manual values
+                    languages: {
+                      ...(cvData.languages || {}),
+                      ...(manualData.languages || {}),
+                    },
+
+                    // For arrays of objects like projects, education, and experience:
+                    // - Keep all manual entries
+                    // - Add AI entries only if they seem unique
+
+                    // Handle projects
+                    projects: manualData.projects?.length
+                      ? manualData.projects
+                      : cvData.projects,
+
+                    // Handle experience
+                    experience: manualData.experience?.length
+                      ? manualData.experience
+                      : cvData.experience,
+
+                    // Handle education
+                    education: manualData.education?.length
+                      ? manualData.education
+                      : cvData.education,
+                  };
+                } else {
+                  // For pure AI generation, use the AI result with minimal defaults
+                  enhancedData = {
+                    firstName: cvData.firstName?.trim() || "Anonymous",
+                    lastName: cvData.lastName?.trim() || "User",
+                    email: cvData.email?.trim() || "no-email@example.com",
+                    // Only include other fields if they exist
+                    ...(cvData.github ? { github: cvData.github } : {}),
+                    ...(cvData.phone ? { phone: cvData.phone } : {}),
+                    ...(cvData.linkedin ? { linkedin: cvData.linkedin } : {}),
+                    ...(cvData.about ? { about: cvData.about?.trim() } : {}),
+                    ...(cvData.skills ? { skills: cvData.skills } : {}),
+                    ...(cvData.languages
+                      ? { languages: cvData.languages }
+                      : {}),
+
+                    // Process projects if they exist
+                    ...(cvData.projects
+                      ? {
+                          projects: cvData.projects.map((p) => ({
                             ...p,
                             description:
                               p.description || "No description provided",
                             technologies: p.technologies || [],
                           })),
-                        })),
-                      }
-                    : {}),
+                        }
+                      : {}),
 
-                  // Process education if it exists
-                  ...(cvData.education ? { education: cvData.education } : {}),
-                };
+                    // Process experience if it exists
+                    ...(cvData.experience
+                      ? {
+                          experience: cvData.experience.map((exp) => ({
+                            ...exp,
+                            projects: exp.projects?.map((p) => ({
+                              ...p,
+                              description:
+                                p.description || "No description provided",
+                              technologies: p.technologies || [],
+                            })),
+                          })),
+                        }
+                      : {}),
+
+                    // Process education if it exists
+                    ...(cvData.education
+                      ? { education: cvData.education }
+                      : {}),
+                  };
+                }
+
+                // Final status update before sending result
+                controller.enqueue(
+                  new TextEncoder().encode(
+                    JSON.stringify({
+                      status: "Finalizing your CV...",
+                    }) + "\n"
+                  )
+                );
 
                 // Send the final result
                 controller.enqueue(
