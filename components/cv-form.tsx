@@ -6,7 +6,6 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Wand2,
   LoaderCircle,
-  ClipboardCopy,
   XCircle,
   FileEdit,
   MessageSquare,
@@ -33,20 +32,8 @@ export function CVForm({ onDataChange, initialData }: CVFormProps) {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
-  const [jsonOutput, setJsonOutput] = useState<string>("");
-  const [lastGeneratedData, setLastGeneratedData] = useState<CVData | null>(
-    null
-  );
 
   const abortController = useRef<AbortController | null>(null);
-  const outputRef = useRef<HTMLDivElement>(null);
-
-  // Effect to update manual data when AI generates something
-  useEffect(() => {
-    if (lastGeneratedData) {
-      setManualData(lastGeneratedData);
-    }
-  }, [lastGeneratedData]);
 
   // Effect to initialize from initialData if provided
   useEffect(() => {
@@ -64,8 +51,6 @@ export function CVForm({ onDataChange, initialData }: CVFormProps) {
     setManualData({});
     setError(null);
     setStatus(null);
-    setJsonOutput("");
-    setLastGeneratedData(null);
   };
 
   const cancelGeneration = () => {
@@ -95,7 +80,6 @@ export function CVForm({ onDataChange, initialData }: CVFormProps) {
       if (data.skills?.length)
         text += `\n\nMy skills include: ${data.skills.join(", ")}`;
 
-      // And so on for other fields...
       setUserText(text);
     }
     setInputMode("ai");
@@ -105,7 +89,7 @@ export function CVForm({ onDataChange, initialData }: CVFormProps) {
   const generateCV = async () => {
     // Validate inputs
     if (inputMode === "ai" && !userText.trim()) {
-      setError("Please provide some information about yourself first");
+      setError("Please provide some information about yourself");
       return;
     }
 
@@ -115,15 +99,14 @@ export function CVForm({ onDataChange, initialData }: CVFormProps) {
         (field) => !manualData[field as keyof CVData]
       );
       if (missingFields.length > 0) {
-        setError(`Please fill in required fields: ${missingFields.join(", ")}`);
+        setError(`Please fill in: ${missingFields.join(", ")}`);
         return;
       }
     }
 
     setGenerating(true);
     setError(null);
-    setStatus(null);
-    setJsonOutput("");
+    setStatus("Processing your information...");
 
     try {
       if (abortController.current) abortController.current.abort();
@@ -142,7 +125,7 @@ export function CVForm({ onDataChange, initialData }: CVFormProps) {
       });
 
       if (!response.ok || !response.body) {
-        throw new Error("Failed to start generation");
+        throw new Error("Failed to generate CV");
       }
 
       const reader = response.body.getReader();
@@ -159,61 +142,38 @@ export function CVForm({ onDataChange, initialData }: CVFormProps) {
           try {
             const data = JSON.parse(line);
 
-            // Always display status updates to fix the visibility issue
+            // Update status messages as they come
             if (data.status) {
               setStatus(data.status);
-            }
-
-            // Show partial results as they come in
-            if (data.partialResult) {
-              try {
-                setJsonOutput(
-                  JSON.stringify(JSON.parse(data.partialResult), null, 2)
-                );
-
-                // Auto scroll output area
-                if (outputRef.current) {
-                  outputRef.current.scrollTop = outputRef.current.scrollHeight;
-                }
-              } catch (e) {
-                // If we can't parse it, show as is
-                setJsonOutput(data.partialResult);
-              }
             }
 
             // Handle final result
             if (data.result) {
               setStatus("✅ CV generated successfully!");
-              setJsonOutput(JSON.stringify(data.result, null, 2));
-              // Save generated data for both output and manual form
-              setLastGeneratedData(data.result);
+              // Update app state with the new CV data
+              setManualData(data.result);
               onDataChange(data.result);
             }
 
-            // Handle errors - ensure they're displayed
+            // Handle errors
             if (data.error) {
               setError(data.error);
-              setStatus("❌ Error: " + data.error);
+              setStatus(null);
             }
           } catch (e) {
-            // Ignore parsing errors for chunks
+            // Ignore parsing errors
           }
         }
       }
     } catch (error) {
       if ((error as Error).name !== "AbortError") {
-        setError((error as Error).message || "Failed to generate CV data");
-        setStatus(`❌ Error: ${(error as Error).message}`);
+        setError((error as Error).message || "Failed to generate CV");
+        setStatus(null);
       }
     } finally {
       setGenerating(false);
       abortController.current = null;
     }
-  };
-
-  const copyJson = () => {
-    navigator.clipboard.writeText(jsonOutput);
-    setStatus("JSON copied to clipboard");
   };
 
   return (
@@ -269,7 +229,7 @@ export function CVForm({ onDataChange, initialData }: CVFormProps) {
               />
 
               <Textarea
-                placeholder="Paste the job description or key requirements here to tailor your CV..."
+                placeholder="Paste job requirements here to tailor your CV..."
                 value={jobRequirements}
                 onChange={(e) => setJobRequirements(e.target.value)}
                 className="resize-none"
@@ -291,7 +251,7 @@ export function CVForm({ onDataChange, initialData }: CVFormProps) {
           </TabsContent>
         </Tabs>
 
-        {/* Always show status to fix visibility issue */}
+        {/* Status display */}
         {status && (
           <div
             className={`text-sm px-3 py-2 rounded flex items-center ${
@@ -310,28 +270,10 @@ export function CVForm({ onDataChange, initialData }: CVFormProps) {
         )}
 
         {/* Error display */}
-        {error && !status?.includes("❌") && (
+        {error && (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
-        )}
-
-        {/* Result display */}
-        {jsonOutput && (
-          <div className="flex-1 min-h-0 flex flex-col border rounded-md overflow-hidden">
-            <div className="bg-slate-100 border-b p-2 flex justify-between items-center">
-              <span className="text-sm font-medium">Generated CV Data</span>
-              <Button variant="ghost" size="sm" onClick={copyJson}>
-                <ClipboardCopy className="h-3.5 w-3.5 mr-1" /> Copy JSON
-              </Button>
-            </div>
-
-            <ScrollArea className="flex-1" ref={outputRef}>
-              <pre className="p-3 text-sm font-mono whitespace-pre-wrap">
-                {jsonOutput}
-              </pre>
-            </ScrollArea>
-          </div>
         )}
 
         <div className="flex justify-between pt-2 border-t">
