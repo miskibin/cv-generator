@@ -193,6 +193,7 @@ For dates, use formats like "June 2019" or "March 2022 - Present".
             );
 
             // Send request to Ollama with the selected model
+            console.log("Sending request to Ollama API with model:", model);
             const ollamaResponse = await fetch(
               "http://localhost:11434/api/generate",
               {

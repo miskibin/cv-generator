@@ -61,7 +61,7 @@ export default function CVGenerator() {
       </div>
 
       {/* Right column - PDF Preview */}
-      <div className="w-1/2 overflow-hidden bg-gray-100 flex flex-col">
+      <div className="w-1/2 overflow-hidden bg-muted/20 flex flex-col">
         <div className="sticky top-0 z-10 bg-white p-4 shadow flex items-center justify-between">
           <h2 className="text-xl font-bold">PDF Preview</h2>
           {cvData && (
@@ -84,9 +84,7 @@ export default function CVGenerator() {
           />
         ) : (
           <div className="flex items-center justify-center h-full">
-            <p className="text-gray-500">
-              Enter your details to generate a preview
-            </p>
+            <p className="">Enter your details to generate a preview</p>
           </div>
         )}
       </div>

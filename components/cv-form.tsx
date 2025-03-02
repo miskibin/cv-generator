@@ -103,24 +103,6 @@ export function CVForm({ onDataChange, initialData }: CVFormProps) {
 
   // Handle switching between AI and manual modes
   const handleSwitchToAI = () => {
-    if (Object.keys(manualData).length > 2) {
-      const data = manualData;
-      let text = "";
-
-      if (data.firstName || data.lastName) {
-        text += `My name is ${data.firstName || ""} ${data.lastName || ""}.`;
-      }
-
-      if (data.email) text += ` Email: ${data.email}.`;
-      if (data.phone) text += ` Phone: ${data.phone}.`;
-      if (data.github) text += ` GitHub: ${data.github}.`;
-      if (data.linkedin) text += ` LinkedIn: ${data.linkedin}.`;
-      if (data.about) text += `\n\nAbout me: ${data.about}`;
-      if (data.skills?.length)
-        text += `\n\nMy skills include: ${data.skills.join(", ")}`;
-
-      setUserText(text);
-    }
     setInputMode("ai");
   };
 
