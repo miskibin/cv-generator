@@ -530,7 +530,6 @@ function renderCV(
       }
     }
   }
-
   // Projects Section
   if (data.projects?.length) {
     yPos = checkForNewPage(spacing.beforeH2 + spacing.lineHeight * 3, yPos);
@@ -552,41 +551,37 @@ function renderCV(
         "F"
       );
 
-      // Project name
-      applyStyle("h3");
-      pdf.text(project.name, margin.left, yPos);
-      yPos += spacing.afterH3 + 2;
-
-      // Links
-      const links = [
-        {
-          value: project.github,
-          url: project.github?.startsWith("http")
-            ? project.github
-            : `https://github.com/${project.github}`,
-        },
-        {
-          value: project.url,
-          url: project.url?.startsWith("http")
-            ? project.url
-            : `https://${project.url}`,
-        },
-      ].filter((link) => link.value);
-
-      if (links.length) {
+      // Project name - make it hyperlink if URL exists
+      if (project.url) {
         applyStyle("link");
-        links.forEach((link, index) => {
-          // Position links evenly - left align first, right align second
-          const x =
-            index === 0
-              ? margin.left
-              : pageWidth - margin.right - pdf.getTextWidth(` ${link.value}`);
-
-          pdf.text(`${link.value}`, x, yPos);
-          pdf.link(x, yPos - 5, 100, 6, { url: link.url });
+        pdf.text(project.name, margin.left, yPos);
+        const projectUrl = project.url.startsWith("http")
+          ? project.url
+          : `https://${project.url}`;
+        pdf.link(margin.left, yPos - 5, pdf.getTextWidth(project.name), 6, {
+          url: projectUrl,
         });
-        yPos += spacing.lineHeight;
+      } else {
+        applyStyle("h3");
+        pdf.text(project.name, margin.left, yPos);
       }
+
+      // GitHub link - on the same row as project name, right aligned
+      if (project.github) {
+        const githubUrl = project.github.startsWith("http")
+          ? project.github
+          : `https://github.com/${project.github}`;
+
+        applyStyle("link");
+        const githubText = project.github;
+        const githubX = pageWidth - margin.right - pdf.getTextWidth(githubText);
+        pdf.text(githubText, githubX, yPos);
+        pdf.link(githubX, yPos - 5, pdf.getTextWidth(githubText), 6, {
+          url: githubUrl,
+        });
+      }
+
+      yPos += spacing.afterH3 + 2;
 
       // Description
       applyStyle("normal");
