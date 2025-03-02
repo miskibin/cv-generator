@@ -29,7 +29,7 @@ interface PDFStyle {
 // Default spacing values
 const defaultSpacing = {
   afterH1: 8,
-  beforeH2: 10,
+  beforeH2: 4,
   afterH2: 5,
   beforeH3: 7,
   afterH3: 5,
@@ -474,19 +474,12 @@ function renderCV(
           // Technologies with proper alignment
           if (project.technologies?.length) {
             applyStyle("accent");
-            const techLabel = "Technologies:";
-            pdf.text(techLabel, margin.left + 6, yPos);
-
-            const labelWidth = pdf.getTextWidth(techLabel + " ");
-            const startX = margin.left + 6 + labelWidth;
-
             // Use renderBadgeRow with label offset for proper alignment
             yPos = renderBadgeRow(
               project.technologies,
-              startX,
+              margin.left,
               yPos,
-              contentWidth - 6,
-              labelWidth
+              contentWidth - 6
             );
           }
 
@@ -553,7 +546,7 @@ function renderCV(
         margin.left - 2,
         yPos - 5,
         contentWidth + 4,
-        spacing.lineHeight + 4,
+        spacing.lineHeight + 1,
         1,
         1,
         "F"
@@ -567,14 +560,12 @@ function renderCV(
       // Links
       const links = [
         {
-          label: "GitHub",
           value: project.github,
           url: project.github?.startsWith("http")
             ? project.github
             : `https://github.com/${project.github}`,
         },
         {
-          label: "URL",
           value: project.url,
           url: project.url?.startsWith("http")
             ? project.url
@@ -585,8 +576,13 @@ function renderCV(
       if (links.length) {
         applyStyle("link");
         links.forEach((link, index) => {
-          const x = margin.left + (index * contentWidth) / 2;
-          pdf.text(`${link.label}: ${link.value}`, x, yPos);
+          // Position links evenly - left align first, right align second
+          const x =
+            index === 0
+              ? margin.left
+              : pageWidth - margin.right - pdf.getTextWidth(` ${link.value}`);
+
+          pdf.text(`${link.value}`, x, yPos);
           pdf.link(x, yPos - 5, 100, 6, { url: link.url });
         });
         yPos += spacing.lineHeight;
@@ -602,19 +598,12 @@ function renderCV(
       // Technologies with proper alignment
       if (project.technologies?.length) {
         applyStyle("accent");
-        const techLabel = "Technologies:";
-        pdf.text(techLabel, margin.left, yPos);
-
-        const labelWidth = pdf.getTextWidth(techLabel + " ");
-        const startX = margin.left + labelWidth;
-
         // Use renderBadgeRow with label offset for proper alignment
         yPos = renderBadgeRow(
           project.technologies,
-          startX,
+          margin.left,
           yPos,
-          contentWidth,
-          labelWidth
+          contentWidth
         );
       }
 

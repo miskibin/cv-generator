@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useCVStore } from "@/store/cv-store";
 
 interface CVFormProps {
   onDataChange: (data: CVData) => void;
@@ -31,12 +32,10 @@ interface CVFormProps {
 }
 
 export function CVForm({ onDataChange, initialData }: CVFormProps) {
+  const { cvData, updateCV, resetCV } = useCVStore();
   const [inputMode, setInputMode] = useState<"ai" | "manual">("ai");
   const [userText, setUserText] = useState("");
   const [jobRequirements, setJobRequirements] = useState("");
-  const [manualData, setManualData] = useState<Partial<CVData>>(
-    initialData || {}
-  );
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -46,11 +45,17 @@ export function CVForm({ onDataChange, initialData }: CVFormProps) {
 
   const abortController = useRef<AbortController | null>(null);
 
-  // Effect to initialize from initialData if provided
+  // Initialize: Use data from initialData prop, then from store
   useEffect(() => {
-    if (initialData) {
-      setManualData(initialData);
-      if (Object.keys(initialData).length > 0) {
+    if (initialData && Object.keys(initialData).length > 0) {
+      updateCV(initialData);
+      if (initialData.firstName || initialData.lastName) {
+        setInputMode("manual");
+      }
+    } else if (cvData && Object.keys(cvData).length > 0) {
+      // Data from localStorage via Zustand
+      onDataChange(cvData as CVData);
+      if (cvData.firstName || cvData.lastName) {
         setInputMode("manual");
       }
     }
@@ -87,7 +92,8 @@ export function CVForm({ onDataChange, initialData }: CVFormProps) {
   const clearForm = () => {
     setUserText("");
     setJobRequirements("");
-    setManualData({});
+    resetCV();
+    onDataChange({} as CVData); // Clear parent component data
     setError(null);
     setStatus(null);
   };
@@ -111,7 +117,7 @@ export function CVForm({ onDataChange, initialData }: CVFormProps) {
     // Validate required fields
     const requiredFields = ["firstName", "lastName", "email"];
     const missingFields = requiredFields.filter(
-      (field) => !manualData[field as keyof CVData]
+      (field) => !cvData[field as keyof CVData]
     );
 
     if (missingFields.length > 0) {
@@ -120,7 +126,7 @@ export function CVForm({ onDataChange, initialData }: CVFormProps) {
     }
 
     setStatus("✅ CV updated successfully!");
-    onDataChange(manualData as CVData);
+    onDataChange(cvData as CVData);
   };
 
   // Generate CV using AI
@@ -176,8 +182,8 @@ export function CVForm({ onDataChange, initialData }: CVFormProps) {
             // Handle final result
             if (data.result) {
               setStatus("✅ CV generated successfully!");
-              // Update app state with the new CV data
-              setManualData(data.result);
+              // Update store and app state with the new CV data
+              updateCV(data.result);
               onDataChange(data.result);
             }
 
@@ -305,10 +311,7 @@ export function CVForm({ onDataChange, initialData }: CVFormProps) {
           <TabsContent value="manual" className="flex-1 overflow-hidden">
             <ScrollArea className="h-[calc(100vh-280px)]">
               <div className="pr-4 pb-2">
-                <ManualCVForm
-                  initialData={manualData as CVData}
-                  onChange={setManualData}
-                />
+                <ManualCVForm />
               </div>
             </ScrollArea>
           </TabsContent>

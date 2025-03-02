@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { CVData, Education, Experience, Project } from "@/types/cv";
+import { Education, Experience, Project } from "@/types/cv";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,11 +24,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-
-interface ManualCVFormProps {
-  initialData?: CVData;
-  onChange: (data: Partial<CVData>) => void;
-}
+import { useCVStore } from "@/store/cv-store";
 
 interface BadgeItemProps {
   text: string;
@@ -59,21 +55,15 @@ const BadgeItem = ({ text, onRemove, small = false }: BadgeItemProps) => (
   </Badge>
 );
 
-export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
-  const [formData, setFormData] = useState<Partial<CVData>>(initialData || {});
+export function ManualCVForm() {
+  const { cvData, updateCV } = useCVStore();
   const [newSkill, setNewSkill] = useState("");
   const [languageName, setLanguageName] = useState("");
   const [languageLevel, setLanguageLevel] = useState("");
 
-  const handleChange = (field: keyof CVData, value: any) => {
-    const updatedData = { ...formData, [field]: value };
-    setFormData(updatedData);
-    onChange(updatedData);
-  };
-
   const addSkill = () => {
     if (!newSkill.trim()) return;
-    handleChange("skills", [...(formData.skills || []), newSkill]);
+    updateCV({ skills: [...(cvData.skills || []), newSkill] });
     setNewSkill("");
   };
 
@@ -86,13 +76,13 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
     if (!tech?.trim()) return;
 
     if (isExperienceProject && expIndex !== undefined) {
-      const updatedExperience = [...(formData.experience || [])];
+      const updatedExperience = [...(cvData.experience || [])];
       updatedExperience[expIndex].projects![projIndex].technologies.push(tech);
-      handleChange("experience", updatedExperience);
+      updateCV({ experience: updatedExperience });
     } else {
-      const updatedProjects = [...(formData.projects || [])];
+      const updatedProjects = [...(cvData.projects || [])];
       updatedProjects[projIndex].technologies.push(tech);
-      handleChange("projects", updatedProjects);
+      updateCV({ projects: updatedProjects });
     }
   };
 
@@ -111,38 +101,38 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
             <div className="grid grid-cols-2 gap-3">
               <Input
                 placeholder="First Name"
-                value={formData.firstName || ""}
-                onChange={(e) => handleChange("firstName", e.target.value)}
+                value={cvData.firstName || ""}
+                onChange={(e) => updateCV({ firstName: e.target.value })}
                 className="h-9"
               />
               <Input
                 placeholder="Last Name"
-                value={formData.lastName || ""}
-                onChange={(e) => handleChange("lastName", e.target.value)}
+                value={cvData.lastName || ""}
+                onChange={(e) => updateCV({ lastName: e.target.value })}
                 className="h-9"
               />
             </div>
             <Input
               placeholder="Email"
               type="email"
-              value={formData.email || ""}
-              onChange={(e) => handleChange("email", e.target.value)}
+              value={cvData.email || ""}
+              onChange={(e) => updateCV({ email: e.target.value })}
             />
             <Input
               placeholder="Phone Number"
-              value={formData.phone || ""}
-              onChange={(e) => handleChange("phone", e.target.value)}
+              value={cvData.phone || ""}
+              onChange={(e) => updateCV({ phone: e.target.value })}
             />
             <div className="grid grid-cols-2 gap-3">
               <Input
                 placeholder="GitHub Username"
-                value={formData.github || ""}
-                onChange={(e) => handleChange("github", e.target.value)}
+                value={cvData.github || ""}
+                onChange={(e) => updateCV({ github: e.target.value })}
               />
               <Input
                 placeholder="LinkedIn Username"
-                value={formData.linkedin || ""}
-                onChange={(e) => handleChange("linkedin", e.target.value)}
+                value={cvData.linkedin || ""}
+                onChange={(e) => updateCV({ linkedin: e.target.value })}
               />
             </div>
           </AccordionContent>
@@ -158,8 +148,8 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
           </AccordionTrigger>
           <AccordionContent className="px-3 py-2 border-t">
             <Textarea
-              value={formData.about || ""}
-              onChange={(e) => handleChange("about", e.target.value)}
+              value={cvData.about || ""}
+              onChange={(e) => updateCV({ about: e.target.value })}
               placeholder="Write about yourself..."
               rows={3}
             />
@@ -193,14 +183,14 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
               </Button>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {formData.skills?.map((skill, index) => (
+              {cvData.skills?.map((skill, index) => (
                 <BadgeItem
                   key={index}
                   text={skill}
                   onRemove={() => {
-                    const skills = [...(formData.skills || [])];
+                    const skills = [...(cvData.skills || [])];
                     skills.splice(index, 1);
-                    handleChange("skills", skills);
+                    updateCV({ skills });
                   }}
                 />
               ))}
@@ -234,9 +224,9 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
                 type="button"
                 onClick={() => {
                   if (!languageName.trim() || !languageLevel.trim()) return;
-                  const updatedLanguages = { ...(formData.languages || {}) };
+                  const updatedLanguages = { ...(cvData.languages || {}) };
                   updatedLanguages[languageName] = languageLevel;
-                  handleChange("languages", updatedLanguages);
+                  updateCV({ languages: updatedLanguages });
                   setLanguageName("");
                   setLanguageLevel("");
                 }}
@@ -248,17 +238,15 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
             </div>
 
             <div className="flex flex-wrap gap-1.5">
-              {formData.languages &&
-                Object.entries(formData.languages).map(([lang, level], i) => (
+              {cvData.languages &&
+                Object.entries(cvData.languages).map(([lang, level], i) => (
                   <BadgeItem
                     key={i}
                     text={`${lang}: ${level}`}
                     onRemove={() => {
-                      const updatedLanguages = {
-                        ...(formData.languages || {}),
-                      };
+                      const updatedLanguages = { ...(cvData.languages || {}) };
                       delete updatedLanguages[lang];
-                      handleChange("languages", updatedLanguages);
+                      updateCV({ languages: updatedLanguages });
                     }}
                   />
                 ))}
@@ -278,10 +266,12 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
             <Button
               type="button"
               onClick={() => {
-                handleChange("education", [
-                  ...(formData.education || []),
-                  { institution: "", degree: "", graduationDate: "" },
-                ]);
+                updateCV({
+                  education: [
+                    ...(cvData.education || []),
+                    { institution: "", degree: "", graduationDate: "" },
+                  ],
+                });
               }}
               variant="outline"
               size="sm"
@@ -290,7 +280,7 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
               <Plus className="h-3.5 w-3.5 mr-1" /> Add Education
             </Button>
 
-            {formData.education?.map((edu, index) => (
+            {cvData.education?.map((edu, index) => (
               <div key={index} className="pt-2 border-t">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm">
@@ -299,9 +289,9 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
                   <button
                     type="button"
                     onClick={() => {
-                      const education = [...(formData.education || [])];
+                      const education = [...(cvData.education || [])];
                       education.splice(index, 1);
-                      handleChange("education", education);
+                      updateCV({ education });
                     }}
                     className="p-1 hover:bg-slate-100"
                   >
@@ -313,27 +303,27 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
                   <Input
                     value={edu.institution}
                     onChange={(e) => {
-                      const education = [...(formData.education || [])];
+                      const education = [...(cvData.education || [])];
                       education[index].institution = e.target.value;
-                      handleChange("education", education);
+                      updateCV({ education });
                     }}
                     placeholder="Institution"
                   />
                   <Input
                     value={edu.degree}
                     onChange={(e) => {
-                      const education = [...(formData.education || [])];
+                      const education = [...(cvData.education || [])];
                       education[index].degree = e.target.value;
-                      handleChange("education", education);
+                      updateCV({ education });
                     }}
                     placeholder="Degree"
                   />
                   <Input
                     value={edu.graduationDate}
                     onChange={(e) => {
-                      const education = [...(formData.education || [])];
+                      const education = [...(cvData.education || [])];
                       education[index].graduationDate = e.target.value;
-                      handleChange("education", education);
+                      updateCV({ education });
                     }}
                     placeholder="Graduation Date"
                   />
@@ -355,16 +345,18 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
             <Button
               type="button"
               onClick={() => {
-                handleChange("experience", [
-                  ...(formData.experience || []),
-                  {
-                    company: "",
-                    position: "",
-                    startDate: "",
-                    endDate: "",
-                    summary: "",
-                  },
-                ]);
+                updateCV({
+                  experience: [
+                    ...(cvData.experience || []),
+                    {
+                      company: "",
+                      position: "",
+                      startDate: "",
+                      endDate: "",
+                      summary: "",
+                    },
+                  ],
+                });
               }}
               variant="outline"
               size="sm"
@@ -373,7 +365,7 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
               <Plus className="h-3.5 w-3.5 mr-1" /> Add Experience
             </Button>
 
-            {formData.experience?.map((exp, expIndex) => (
+            {cvData.experience?.map((exp, expIndex) => (
               <div key={expIndex} className="pt-2 border-t">
                 <div className="flex justify-between items-center mb-2">
                   <h4 className="text-sm">
@@ -383,9 +375,9 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
                   <button
                     type="button"
                     onClick={() => {
-                      const experience = [...(formData.experience || [])];
+                      const experience = [...(cvData.experience || [])];
                       experience.splice(expIndex, 1);
-                      handleChange("experience", experience);
+                      updateCV({ experience });
                     }}
                     className="p-1 hover:bg-slate-100"
                   >
@@ -397,18 +389,18 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
                   <Input
                     value={exp.company}
                     onChange={(e) => {
-                      const experience = [...(formData.experience || [])];
+                      const experience = [...(cvData.experience || [])];
                       experience[expIndex].company = e.target.value;
-                      handleChange("experience", experience);
+                      updateCV({ experience });
                     }}
                     placeholder="Company"
                   />
                   <Input
                     value={exp.position}
                     onChange={(e) => {
-                      const experience = [...(formData.experience || [])];
+                      const experience = [...(cvData.experience || [])];
                       experience[expIndex].position = e.target.value;
-                      handleChange("experience", experience);
+                      updateCV({ experience });
                     }}
                     placeholder="Position"
                   />
@@ -416,18 +408,18 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
                     <Input
                       value={exp.startDate}
                       onChange={(e) => {
-                        const experience = [...(formData.experience || [])];
+                        const experience = [...(cvData.experience || [])];
                         experience[expIndex].startDate = e.target.value;
-                        handleChange("experience", experience);
+                        updateCV({ experience });
                       }}
                       placeholder="Start Date"
                     />
                     <Input
                       value={exp.endDate}
                       onChange={(e) => {
-                        const experience = [...(formData.experience || [])];
+                        const experience = [...(cvData.experience || [])];
                         experience[expIndex].endDate = e.target.value;
-                        handleChange("experience", experience);
+                        updateCV({ experience });
                       }}
                       placeholder="End Date"
                     />
@@ -435,9 +427,9 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
                   <Textarea
                     value={exp.summary || ""}
                     onChange={(e) => {
-                      const experience = [...(formData.experience || [])];
+                      const experience = [...(cvData.experience || [])];
                       experience[expIndex].summary = e.target.value;
-                      handleChange("experience", experience);
+                      updateCV({ experience });
                     }}
                     placeholder="Summary"
                     rows={2}
@@ -453,12 +445,12 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
                       size="xs"
                       variant="ghost"
                       onClick={() => {
-                        const experience = [...(formData.experience || [])];
+                        const experience = [...(cvData.experience || [])];
                         experience[expIndex].projects = [
                           ...(experience[expIndex].projects || []),
                           { name: "", description: "", technologies: [] },
                         ];
-                        handleChange("experience", experience);
+                        updateCV({ experience });
                       }}
                       className="h-6 text-xs px-2"
                     >
@@ -478,9 +470,9 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
                         <button
                           type="button"
                           onClick={() => {
-                            const experience = [...(formData.experience || [])];
+                            const experience = [...(cvData.experience || [])];
                             experience[expIndex].projects!.splice(projIndex, 1);
-                            handleChange("experience", experience);
+                            updateCV({ experience });
                           }}
                           className="p-0.5 hover:bg-slate-100"
                         >
@@ -490,10 +482,10 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
                       <Input
                         value={project.name}
                         onChange={(e) => {
-                          const experience = [...(formData.experience || [])];
+                          const experience = [...(cvData.experience || [])];
                           experience[expIndex].projects![projIndex].name =
                             e.target.value;
-                          handleChange("experience", experience);
+                          updateCV({ experience });
                         }}
                         placeholder="Project Name"
                         className="h-7 text-xs mb-1"
@@ -501,11 +493,11 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
                       <Textarea
                         value={project.description}
                         onChange={(e) => {
-                          const experience = [...(formData.experience || [])];
+                          const experience = [...(cvData.experience || [])];
                           experience[expIndex].projects![
                             projIndex
                           ].description = e.target.value;
-                          handleChange("experience", experience);
+                          updateCV({ experience });
                         }}
                         placeholder="Description"
                         className="text-xs mb-1 h-12"
@@ -532,13 +524,11 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
                             text={tech}
                             small={true}
                             onRemove={() => {
-                              const experience = [
-                                ...(formData.experience || []),
-                              ];
+                              const experience = [...(cvData.experience || [])];
                               experience[expIndex].projects![
                                 projIndex
                               ].technologies.splice(techIndex, 1);
-                              handleChange("experience", experience);
+                              updateCV({ experience });
                             }}
                           />
                         ))}
@@ -563,10 +553,12 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
             <Button
               type="button"
               onClick={() => {
-                handleChange("projects", [
-                  ...(formData.projects || []),
-                  { name: "", description: "", technologies: [] },
-                ]);
+                updateCV({
+                  projects: [
+                    ...(cvData.projects || []),
+                    { name: "", description: "", technologies: [] },
+                  ],
+                });
               }}
               variant="outline"
               size="sm"
@@ -575,7 +567,7 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
               <Plus className="h-3.5 w-3.5 mr-1" /> Add Project
             </Button>
 
-            {formData.projects?.map((project, index) => (
+            {cvData.projects?.map((project, index) => (
               <div key={index} className="pt-2 border-t">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm">
@@ -584,9 +576,9 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
                   <button
                     type="button"
                     onClick={() => {
-                      const projects = [...(formData.projects || [])];
+                      const projects = [...(cvData.projects || [])];
                       projects.splice(index, 1);
-                      handleChange("projects", projects);
+                      updateCV({ projects });
                     }}
                     className="p-1 hover:bg-slate-100"
                   >
@@ -598,18 +590,18 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
                   <Input
                     value={project.name}
                     onChange={(e) => {
-                      const projects = [...(formData.projects || [])];
+                      const projects = [...(cvData.projects || [])];
                       projects[index].name = e.target.value;
-                      handleChange("projects", projects);
+                      updateCV({ projects });
                     }}
                     placeholder="Project Name"
                   />
                   <Textarea
                     value={project.description}
                     onChange={(e) => {
-                      const projects = [...(formData.projects || [])];
+                      const projects = [...(cvData.projects || [])];
                       projects[index].description = e.target.value;
-                      handleChange("projects", projects);
+                      updateCV({ projects });
                     }}
                     placeholder="Description"
                     rows={2}
@@ -620,9 +612,9 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
                       <Input
                         value={project.github || ""}
                         onChange={(e) => {
-                          const projects = [...(formData.projects || [])];
+                          const projects = [...(cvData.projects || [])];
                           projects[index].github = e.target.value;
-                          handleChange("projects", projects);
+                          updateCV({ projects });
                         }}
                         placeholder="GitHub URL"
                         className="pl-7"
@@ -633,9 +625,9 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
                       <Input
                         value={project.url || ""}
                         onChange={(e) => {
-                          const projects = [...(formData.projects || [])];
+                          const projects = [...(cvData.projects || [])];
                           projects[index].url = e.target.value;
-                          handleChange("projects", projects);
+                          updateCV({ projects });
                         }}
                         placeholder="Live URL"
                         className="pl-7"
@@ -664,9 +656,9 @@ export function ManualCVForm({ initialData, onChange }: ManualCVFormProps) {
                           text={tech}
                           small={true}
                           onRemove={() => {
-                            const projects = [...(formData.projects || [])];
+                            const projects = [...(cvData.projects || [])];
                             projects[index].technologies.splice(techIndex, 1);
-                            handleChange("projects", projects);
+                            updateCV({ projects });
                           }}
                         />
                       ))}
