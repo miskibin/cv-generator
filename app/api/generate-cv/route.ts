@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { CVData } from "@/types/cv";
 import { getTypeDefinitions } from "@/utils/typeToString";
+import { generateWithTogether } from "@/utils/together-api";
 
 export async function POST(request: Request) {
   try {
@@ -8,7 +9,7 @@ export async function POST(request: Request) {
       text,
       manualData,
       jobRequirements,
-      model = "phi4",
+      model = "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free", // Default to Llama 3
     } = await request.json();
 
     // If we have manual data, use that directly with AI filling only the blanks
@@ -192,90 +193,28 @@ For dates, use formats like "June 2019" or "March 2022 - Present".
               )
             );
 
-            // Send request to Ollama with the selected model
-            console.log("Sending request to Ollama API with model:", model);
-            const ollamaResponse = await fetch(
-              "http://localhost:11434/api/generate",
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  model: model,
-                  prompt,
-                  stream: true,
-                  options: {
-                    temperature: hasManualData ? 0.4 : 0.7, // Lower temperature for manual data to be more conservative
-                    top_p: 0.9,
-                  },
-                }),
-              }
-            );
+            // Send request to Together API with the selected model
+            console.log("Sending request to Together API with model:", model);
 
-            if (!ollamaResponse.ok) {
-              throw new Error("Failed to communicate with Ollama API");
-            }
+            try {
+              // Use our Together API utility
+              const llmResponse = await generateWithTogether(prompt, {
+                // model: model,
+                temperature: hasManualData ? 0.4 : 0.7, // Lower temperature for manual data
+                max_tokens: 4096, // Allow longer responses for complete CV
+              });
 
-            let currentJson = "";
-
-            // Process response stream
-            if (ollamaResponse.body) {
-              const reader = ollamaResponse.body.getReader();
-
-              // Read stream chunks
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                const chunk = new TextDecoder().decode(value);
-
-                try {
-                  const jsonChunk = JSON.parse(chunk);
-                  const responseText = jsonChunk.response || "";
-                  currentJson += responseText;
-
-                  // Try to extract valid JSON for streaming
-                  try {
-                    // Extract what looks like JSON (between curly braces)
-                    if (
-                      currentJson.includes("{") &&
-                      currentJson.includes("}")
-                    ) {
-                      let jsonText = currentJson.substring(
-                        currentJson.indexOf("{"),
-                        currentJson.lastIndexOf("}") + 1
-                      );
-
-                      // Balance braces if needed
-                      const openBraces = (jsonText.match(/{/g) || []).length;
-                      const closeBraces = (jsonText.match(/}/g) || []).length;
-
-                      if (openBraces > closeBraces) {
-                        jsonText += "}".repeat(openBraces - closeBraces);
-                      }
-
-                      // Only send if we can parse it
-                      JSON.parse(jsonText);
-
-                      // Send partial result
-                      controller.enqueue(
-                        new TextEncoder().encode(
-                          JSON.stringify({
-                            partialResult: jsonText,
-                          }) + "\n"
-                        )
-                      );
-                    }
-                  } catch (e) {
-                    // Silently continue if we couldn't parse yet
-                  }
-                } catch (error) {
-                  // Ignore parse errors for chunks
-                }
-              }
+              controller.enqueue(
+                new TextEncoder().encode(
+                  JSON.stringify({
+                    status: "Processing AI response...",
+                  }) + "\n"
+                )
+              );
 
               try {
                 // Extract final JSON (either from code block or directly)
-                let finalJson = currentJson;
+                let finalJson = llmResponse;
 
                 // Try to find JSON in code block first
                 const codeBlockMatch = finalJson.match(
@@ -416,18 +355,38 @@ For dates, use formats like "June 2019" or "March 2022 - Present".
                     }) + "\n"
                   )
                 );
-              } catch (error) {
+              } catch (parseError) {
+                console.error("Error parsing CV JSON:", parseError);
                 controller.enqueue(
                   new TextEncoder().encode(
                     JSON.stringify({
                       error: "Failed to parse CV data",
                       status: "Error",
+                      details:
+                        parseError instanceof Error
+                          ? parseError.message
+                          : "Unknown parsing error",
                     }) + "\n"
                   )
                 );
               }
+            } catch (apiError) {
+              console.error("Together API error:", apiError);
+              controller.enqueue(
+                new TextEncoder().encode(
+                  JSON.stringify({
+                    error: "Failed to generate CV with Together API",
+                    status: "Error",
+                    details:
+                      apiError instanceof Error
+                        ? apiError.message
+                        : "Unknown API error",
+                  }) + "\n"
+                )
+              );
             }
           } catch (error) {
+            console.error("General error in CV generation:", error);
             controller.enqueue(
               new TextEncoder().encode(
                 JSON.stringify({
@@ -447,6 +406,7 @@ For dates, use formats like "June 2019" or "March 2022 - Present".
       { headers: { "Content-Type": "application/json; charset=utf-8" } }
     );
   } catch (error) {
+    console.error("Server error:", error);
     return NextResponse.json(
       { error: "Server error while generating CV data" },
       { status: 500 }
