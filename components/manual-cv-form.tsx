@@ -1,12 +1,8 @@
 import React, { useState } from "react";
 import { Education, Experience, Project } from "@/types/cv";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Plus,
-  Trash2,
-  X,
   User,
   FileText,
   Briefcase,
@@ -16,8 +12,8 @@ import {
   Sparkles,
   ExternalLink,
   Github,
+  X,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import {
   Accordion,
   AccordionContent,
@@ -25,35 +21,16 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { useCVStore } from "@/store/cv-store";
-
-interface BadgeItemProps {
-  text: string;
-  onRemove: () => void;
-  small?: boolean;
-}
-
-// Reusable badge component for technologies and skills
-const BadgeItem = ({ text, onRemove, small = false }: BadgeItemProps) => (
-  <Badge
-    variant={small ? "outline" : "secondary"}
-    className={`flex items-center gap-1 ${
-      small ? "py-0 px-1 text-xs" : "py-0.5 pl-2 pr-1"
-    }`}
-  >
-    {text}
-    <button
-      type="button"
-      onClick={onRemove}
-      className={
-        small
-          ? "ml-1 hover:text-red-500"
-          : "rounded-full hover:bg-slate-200 p-0.5"
-      }
-    >
-      <X className={small ? "h-2 w-2" : "h-3 w-3"} />
-    </button>
-  </Badge>
-);
+import {
+  AddButton,
+  BadgeItem,
+  BadgeList,
+  FieldGroup,
+  ItemCard,
+  LabeledField,
+  SkillsInput,
+  Technologies,
+} from "./form/cv-form-components";
 
 export function ManualCVForm() {
   const { cvData, updateCV } = useCVStore();
@@ -67,23 +44,10 @@ export function ManualCVForm() {
     setNewSkill("");
   };
 
-  const addTechnology = (
-    projIndex: number,
-    isExperienceProject: boolean = false,
-    expIndex?: number
-  ) => {
-    const tech = prompt("Enter technology:");
-    if (!tech?.trim()) return;
-
-    if (isExperienceProject && expIndex !== undefined) {
-      const updatedExperience = [...(cvData.experience || [])];
-      updatedExperience[expIndex].projects![projIndex].technologies.push(tech);
-      updateCV({ experience: updatedExperience });
-    } else {
-      const updatedProjects = [...(cvData.projects || [])];
-      updatedProjects[projIndex].technologies.push(tech);
-      updateCV({ projects: updatedProjects });
-    }
+  const removeSkill = (index: number) => {
+    const skills = [...(cvData.skills || [])];
+    skills.splice(index, 1);
+    updateCV({ skills });
   };
 
   return (
@@ -165,36 +129,13 @@ export function ManualCVForm() {
             </span>
           </AccordionTrigger>
           <AccordionContent className="px-3 py-2 border-t space-y-3">
-            <div className="flex items-center gap-2">
-              <Input
-                value={newSkill}
-                onChange={(e) => setNewSkill(e.target.value)}
-                placeholder="Add a skill..."
-                onKeyPress={(e) => e.key === "Enter" && addSkill()}
-                className="flex-1"
-              />
-              <Button
-                type="button"
-                onClick={addSkill}
-                size="sm"
-                variant="outline"
-              >
-                Add
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {cvData.skills?.map((skill, index) => (
-                <BadgeItem
-                  key={index}
-                  text={skill}
-                  onRemove={() => {
-                    const skills = [...(cvData.skills || [])];
-                    skills.splice(index, 1);
-                    updateCV({ skills });
-                  }}
-                />
-              ))}
-            </div>
+            <SkillsInput
+              value={newSkill}
+              onChange={(e) => setNewSkill(e.target.value)}
+              onAdd={addSkill}
+              placeholder="Add a skill..."
+            />
+            <BadgeList items={cvData.skills || []} onRemove={removeSkill} />
           </AccordionContent>
         </AccordionItem>
 
@@ -220,8 +161,7 @@ export function ManualCVForm() {
                 placeholder="Proficiency level"
                 className="flex-1"
               />
-              <Button
-                type="button"
+              <AddButton
                 onClick={() => {
                   if (!languageName.trim() || !languageLevel.trim()) return;
                   const updatedLanguages = { ...(cvData.languages || {}) };
@@ -230,11 +170,8 @@ export function ManualCVForm() {
                   setLanguageName("");
                   setLanguageLevel("");
                 }}
-                size="sm"
-                variant="outline"
-              >
-                Add
-              </Button>
+                text="Add"
+              />
             </div>
 
             <div className="flex flex-wrap gap-1.5">
@@ -263,8 +200,7 @@ export function ManualCVForm() {
             </span>
           </AccordionTrigger>
           <AccordionContent className="px-3 py-2 border-t space-y-3">
-            <Button
-              type="button"
+            <AddButton
               onClick={() => {
                 updateCV({
                   education: [
@@ -273,33 +209,21 @@ export function ManualCVForm() {
                   ],
                 });
               }}
-              variant="outline"
-              size="sm"
-              className="w-full"
-            >
-              <Plus className="h-3.5 w-3.5 mr-1" /> Add Education
-            </Button>
+              text="Add Education"
+              fullWidth
+            />
 
             {cvData.education?.map((edu, index) => (
-              <div key={index} className="pt-2 border-t">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm">
-                    {edu.institution || "New Institution"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const education = [...(cvData.education || [])];
-                      education.splice(index, 1);
-                      updateCV({ education });
-                    }}
-                    className="p-1 hover:bg-slate-100"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-
-                <div className="grid gap-2">
+              <ItemCard
+                key={index}
+                title={edu.institution || "New Institution"}
+                onRemove={() => {
+                  const education = [...(cvData.education || [])];
+                  education.splice(index, 1);
+                  updateCV({ education });
+                }}
+              >
+                <FieldGroup>
                   <Input
                     value={edu.institution}
                     onChange={(e) => {
@@ -327,8 +251,8 @@ export function ManualCVForm() {
                     }}
                     placeholder="Graduation Date"
                   />
-                </div>
-              </div>
+                </FieldGroup>
+              </ItemCard>
             ))}
           </AccordionContent>
         </AccordionItem>
@@ -342,8 +266,7 @@ export function ManualCVForm() {
             </span>
           </AccordionTrigger>
           <AccordionContent className="px-3 py-2 border-t space-y-3">
-            <Button
-              type="button"
+            <AddButton
               onClick={() => {
                 updateCV({
                   experience: [
@@ -354,38 +277,28 @@ export function ManualCVForm() {
                       startDate: "",
                       endDate: "",
                       summary: "",
+                      projects: [],
                     },
                   ],
                 });
               }}
-              variant="outline"
-              size="sm"
-              className="w-full"
-            >
-              <Plus className="h-3.5 w-3.5 mr-1" /> Add Experience
-            </Button>
+              text="Add Experience"
+              fullWidth
+            />
 
             {cvData.experience?.map((exp, expIndex) => (
-              <div key={expIndex} className="pt-2 border-t">
-                <div className="flex justify-between items-center mb-2">
-                  <h4 className="text-sm">
-                    {exp.position ? exp.position : "New Position"}
-                    {exp.company ? ` at ${exp.company}` : ""}
-                  </h4>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const experience = [...(cvData.experience || [])];
-                      experience.splice(expIndex, 1);
-                      updateCV({ experience });
-                    }}
-                    className="p-1 hover:bg-slate-100"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-
-                <div className="grid gap-2">
+              <ItemCard
+                key={expIndex}
+                title={`${exp.position || "New Position"}${
+                  exp.company ? ` at ${exp.company}` : ""
+                }`}
+                onRemove={() => {
+                  const experience = [...(cvData.experience || [])];
+                  experience.splice(expIndex, 1);
+                  updateCV({ experience });
+                }}
+              >
+                <FieldGroup>
                   <Input
                     value={exp.company}
                     onChange={(e) => {
@@ -434,16 +347,13 @@ export function ManualCVForm() {
                     placeholder="Summary"
                     rows={2}
                   />
-                </div>
+                </FieldGroup>
 
                 {/* Projects */}
-                <div className="pt-2 mt-2 border-t border-dashed">
+                <FieldGroup className="pt-2">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-xs">Projects</span>
-                    <Button
-                      type="button"
-                      size="xs"
-                      variant="ghost"
+                    <AddButton
                       onClick={() => {
                         const experience = [...(cvData.experience || [])];
                         experience[expIndex].projects = [
@@ -452,10 +362,8 @@ export function ManualCVForm() {
                         ];
                         updateCV({ experience });
                       }}
-                      className="h-6 text-xs px-2"
-                    >
-                      <Plus className="h-3 w-3 mr-1" /> Add
-                    </Button>
+                      text="Add"
+                    />
                   </div>
 
                   {exp.projects?.map((project, projIndex) => (
@@ -474,7 +382,7 @@ export function ManualCVForm() {
                             experience[expIndex].projects!.splice(projIndex, 1);
                             updateCV({ experience });
                           }}
-                          className="p-0.5 hover:bg-slate-100"
+                          className="p-0.5 hover:bg-slate-100 rounded"
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -503,40 +411,21 @@ export function ManualCVForm() {
                         className="text-xs mb-1 h-12"
                         rows={1}
                       />
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs">Technologies</span>
-                        <Button
-                          type="button"
-                          size="xs"
-                          variant="ghost"
-                          onClick={() =>
-                            addTechnology(projIndex, true, expIndex)
-                          }
-                          className="h-5 text-xs px-2"
-                        >
-                          <Plus className="h-2.5 w-2.5 mr-1" /> Add
-                        </Button>
-                      </div>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {project.technologies?.map((tech, techIndex) => (
-                          <BadgeItem
-                            key={techIndex}
-                            text={tech}
-                            small={true}
-                            onRemove={() => {
-                              const experience = [...(cvData.experience || [])];
-                              experience[expIndex].projects![
-                                projIndex
-                              ].technologies.splice(techIndex, 1);
-                              updateCV({ experience });
-                            }}
-                          />
-                        ))}
-                      </div>
+
+                      <Technologies
+                        technologies={project.technologies || []}
+                        onChange={(technologies) => {
+                          const experience = [...(cvData.experience || [])];
+                          experience[expIndex].projects![
+                            projIndex
+                          ].technologies = technologies;
+                          updateCV({ experience });
+                        }}
+                      />
                     </div>
                   ))}
-                </div>
-              </div>
+                </FieldGroup>
+              </ItemCard>
             ))}
           </AccordionContent>
         </AccordionItem>
@@ -550,8 +439,7 @@ export function ManualCVForm() {
             </span>
           </AccordionTrigger>
           <AccordionContent className="px-3 py-2 border-t space-y-3">
-            <Button
-              type="button"
+            <AddButton
               onClick={() => {
                 updateCV({
                   projects: [
@@ -560,33 +448,21 @@ export function ManualCVForm() {
                   ],
                 });
               }}
-              variant="outline"
-              size="sm"
-              className="w-full"
-            >
-              <Plus className="h-3.5 w-3.5 mr-1" /> Add Project
-            </Button>
+              text="Add Project"
+              fullWidth
+            />
 
             {cvData.projects?.map((project, index) => (
-              <div key={index} className="pt-2 border-t">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm">
-                    {project.name || "New Project"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const projects = [...(cvData.projects || [])];
-                      projects.splice(index, 1);
-                      updateCV({ projects });
-                    }}
-                    className="p-1 hover:bg-slate-100"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-
-                <div className="grid gap-2">
+              <ItemCard
+                key={index}
+                title={project.name || "New Project"}
+                onRemove={() => {
+                  const projects = [...(cvData.projects || [])];
+                  projects.splice(index, 1);
+                  updateCV({ projects });
+                }}
+              >
+                <FieldGroup>
                   <Input
                     value={project.name}
                     onChange={(e) => {
@@ -636,36 +512,16 @@ export function ManualCVForm() {
                     </div>
                   </div>
 
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-xs">Technologies</span>
-                      <Button
-                        type="button"
-                        size="xs"
-                        variant="ghost"
-                        onClick={() => addTechnology(index)}
-                        className="h-6 text-xs px-2"
-                      >
-                        <Plus className="h-3 w-3 mr-1" /> Add
-                      </Button>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {project.technologies?.map((tech, techIndex) => (
-                        <BadgeItem
-                          key={techIndex}
-                          text={tech}
-                          small={true}
-                          onRemove={() => {
-                            const projects = [...(cvData.projects || [])];
-                            projects[index].technologies.splice(techIndex, 1);
-                            updateCV({ projects });
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
+                  <Technologies
+                    technologies={project.technologies || []}
+                    onChange={(technologies) => {
+                      const projects = [...(cvData.projects || [])];
+                      projects[index].technologies = technologies;
+                      updateCV({ projects });
+                    }}
+                  />
+                </FieldGroup>
+              </ItemCard>
             ))}
           </AccordionContent>
         </AccordionItem>

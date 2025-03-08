@@ -394,11 +394,25 @@ function renderCV(
     const x = margin.left + col * (contentWidth / contactColumns);
     const y = yPos + row * spacing.lineHeight;
 
-    pdf.text(`${item.label}: ${item.value}`, x, y);
-
-    applyStyle("link");
-    pdf.link(x, y - 5, 100, 6, { url: item.link });
-    applyStyle("normal");
+    // For GitHub and LinkedIn, show "link" instead of URL
+    if (item.label === "GitHub" || item.label === "LinkedIn") {
+      pdf.text(`${item.label}: `, x, y);
+      applyStyle("link");
+      pdf.text("link", x + pdf.getTextWidth(`${item.label}: `), y);
+      pdf.link(
+        x + pdf.getTextWidth(`${item.label}: `),
+        y - 5,
+        pdf.getTextWidth("link"),
+        6,
+        { url: item.link }
+      );
+      applyStyle("normal");
+    } else {
+      pdf.text(`${item.label}: ${item.value}`, x, y);
+      applyStyle("link");
+      pdf.link(x, y - 5, 100, 6, { url: item.link });
+      applyStyle("normal");
+    }
   }
 
   yPos += contactRows * spacing.lineHeight + spacing.paragraphGap;
@@ -469,7 +483,7 @@ function renderCV(
           );
           pdf.text(descLines, margin.left + 6, yPos);
           yPos +=
-            spacing.lineHeight * descLines.length + spacing.paragraphGap * 0.5;
+            spacing.lineHeight * descLines.length + spacing.paragraphGap * 0.25; // Changed from 0.5 to 0.25
 
           // Technologies with proper alignment
           if (project.technologies?.length) {
@@ -587,8 +601,7 @@ function renderCV(
       applyStyle("normal");
       const descLines = pdf.splitTextToSize(project.description, contentWidth);
       pdf.text(descLines, margin.left, yPos);
-      yPos +=
-        spacing.lineHeight * descLines.length + spacing.paragraphGap * 0.5;
+      yPos += spacing.lineHeight * descLines.length; // Changed from 0.5 to 0.25
 
       // Technologies with proper alignment
       if (project.technologies?.length) {
@@ -634,15 +647,6 @@ function renderCV(
       yPos += spacing.lineHeight * 1.3;
     }
   }
-
-  // Footer
-  applyStyle("muted");
-  const footer = `Generated with CV Generator - ${new Date().toLocaleDateString()}`;
-  pdf.text(
-    footer,
-    (pageWidth - pdf.getTextWidth(footer)) / 2,
-    pageHeight - margin.bottom
-  );
 
   return pdf;
 }

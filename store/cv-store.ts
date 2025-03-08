@@ -18,6 +18,12 @@ interface CVStore {
   githubProjects: GitHubProject[];
   isLoadingProjects: boolean;
   projectLoadError: string | null;
+  fetchStatus: {
+    message: string | null;
+    step: string | null;
+    progress: number;
+    error: string | null;
+  };
 
   updateCV: (data: Partial<CVData>) => void;
   resetCV: () => void;
@@ -25,6 +31,8 @@ interface CVStore {
   setGithubProjects: (projects: GitHubProject[]) => void;
   setIsLoadingProjects: (isLoading: boolean) => void;
   setProjectLoadError: (error: string | null) => void;
+  setFetchStatus: (status: Partial<CVStore["fetchStatus"]>) => void;
+  resetFetchStatus: () => void;
 }
 
 export const useCVStore = create<CVStore>()(
@@ -35,6 +43,12 @@ export const useCVStore = create<CVStore>()(
       githubProjects: [],
       isLoadingProjects: false,
       projectLoadError: null,
+      fetchStatus: {
+        message: null,
+        step: null,
+        progress: 0,
+        error: null,
+      },
 
       updateCV: (data) =>
         set((state) => ({
@@ -52,6 +66,19 @@ export const useCVStore = create<CVStore>()(
       setIsLoadingProjects: (isLoading) =>
         set({ isLoadingProjects: isLoading }),
       setProjectLoadError: (error) => set({ projectLoadError: error }),
+      setFetchStatus: (status) =>
+        set((state) => ({
+          fetchStatus: { ...state.fetchStatus, ...status },
+        })),
+      resetFetchStatus: () =>
+        set({
+          fetchStatus: {
+            message: null,
+            step: null,
+            progress: 0,
+            error: null,
+          },
+        }),
     }),
     {
       name: "cv-storage",

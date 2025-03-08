@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useCVStore } from "@/store/cv-store";
 import { Github, Loader2, RefreshCw, XCircle } from "lucide-react";
 import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Alert, AlertDescription } from "./ui/alert";
 import { ScrollArea } from "./ui/scroll-area";
+import { Progress } from "./ui/progress";
 
 export function GitHubProjectsFetcher() {
   const {
@@ -17,15 +17,17 @@ export function GitHubProjectsFetcher() {
     githubProjects,
     isLoadingProjects,
     projectLoadError,
+    fetchStatus,
     setGithubUsername,
     setGithubProjects,
     setIsLoadingProjects,
     setProjectLoadError,
+    setFetchStatus,
+    resetFetchStatus,
     updateCV,
   } = useCVStore();
 
   const [tempUsername, setTempUsername] = useState(githubUsername);
-  const [status, setStatus] = useState<string | null>(null);
 
   const fetchGithubProjects = async () => {
     if (!tempUsername.trim()) {
@@ -35,7 +37,12 @@ export function GitHubProjectsFetcher() {
 
     setIsLoadingProjects(true);
     setProjectLoadError(null);
-    setStatus("Fetching repositories...");
+    resetFetchStatus();
+    setFetchStatus({
+      message: "Fetching repositories...",
+      step: "fetch",
+      progress: 10,
+    });
 
     try {
       const response = await fetch(
@@ -47,7 +54,12 @@ export function GitHubProjectsFetcher() {
         throw new Error(errorData.error || "Failed to fetch GitHub projects");
       }
 
-      setStatus("Analyzing repositories and READMEs...");
+      setFetchStatus({
+        message: "Analyzing repositories and READMEs...",
+        step: "analyze",
+        progress: 50,
+      });
+
       const data = await response.json();
       setGithubProjects(data.projects);
       setGithubUsername(tempUsername);
@@ -63,13 +75,29 @@ export function GitHubProjectsFetcher() {
         }));
 
         updateCV({ projects: cvProjects });
-        setStatus("Projects imported successfully!");
-        setTimeout(() => setStatus(null), 3000);
+        setFetchStatus({
+          message:
+            "Projects imported successfully! Only up to 4 most relevant will be shown in your CV.",
+          step: "complete",
+          progress: 100,
+        });
+        setTimeout(() => resetFetchStatus(), 5000); // Increased timeout to ensure message is read
+      } else {
+        setFetchStatus({
+          message: "No projects found",
+          step: "complete",
+          progress: 100,
+        });
       }
     } catch (error) {
-      setProjectLoadError(
-        error instanceof Error ? error.message : "Unknown error occurred"
-      );
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      setProjectLoadError(errorMessage);
+      setFetchStatus({
+        error: errorMessage,
+        step: "error",
+        progress: 100,
+      });
     } finally {
       setIsLoadingProjects(false);
     }
@@ -80,7 +108,21 @@ export function GitHubProjectsFetcher() {
     setGithubUsername("");
     setTempUsername("");
     setProjectLoadError(null);
+    resetFetchStatus();
     updateCV({ projects: [] });
+  };
+
+  const handleRetry = () => {
+    if (projectLoadError?.includes("rate limit")) {
+      // Add message about rate limiting
+      setFetchStatus({
+        message: "Retrying after rate limit error. Please be patient...",
+        error: null,
+      });
+      setTimeout(fetchGithubProjects, 2000);
+    } else {
+      fetchGithubProjects();
+    }
   };
 
   return (
@@ -114,22 +156,36 @@ export function GitHubProjectsFetcher() {
         </div>
       </div>
 
+      {isLoadingProjects && fetchStatus.progress > 0 && (
+        <div className="space-y-2">
+          <Progress value={fetchStatus.progress} />
+          <div className="text-sm flex items-center py-1 text-amber-700">
+            <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+            {fetchStatus.message || "Processing..."}
+          </div>
+        </div>
+      )}
+
       {projectLoadError && (
         <Alert variant="destructive">
-          <AlertDescription>{projectLoadError}</AlertDescription>
+          <AlertDescription className="flex justify-between items-center">
+            <span>{projectLoadError}</span>
+            {projectLoadError.includes("rate limit") && (
+              <Button size="sm" variant="outline" onClick={handleRetry}>
+                <RefreshCw className="h-3 w-3 mr-1" /> Retry
+              </Button>
+            )}
+          </AlertDescription>
         </Alert>
       )}
 
-      {status && !isLoadingProjects && (
-        <div className="text-sm text-green-700 py-1">{status}</div>
-      )}
-
-      {isLoadingProjects && (
-        <div className="text-sm flex items-center py-1 text-amber-700">
-          <Loader2 className="h-3 w-3 mr-2 animate-spin" />
-          {status || "Loading projects..."}
-        </div>
-      )}
+      {fetchStatus.message &&
+        !isLoadingProjects &&
+        fetchStatus.step === "complete" && (
+          <div className="text-sm text-green-700 py-1">
+            {fetchStatus.message}
+          </div>
+        )}
 
       {githubProjects.length > 0 && (
         <div>

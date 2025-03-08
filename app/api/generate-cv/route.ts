@@ -35,9 +35,10 @@ Make the CV more relevant by:
 2. Prioritizing relevant experience
 3. Using appropriate keywords from the job description
 4. Adjusting the summary/about section to position the candidate for this specific role
+5. SELECT ONLY UP TO 4 MOST RELEVANT GITHUB PROJECTS that best demonstrate skills matching the job requirements
 `
       : `
-No specific job requirements provided. Create a general-purpose professional CV.
+No specific job requirements provided. Create a general-purpose professional CV with up to 4 of the most impressive projects.
 `;
 
     // Enhanced prompt for manual data - explicitly instructing to preserve structure and values
@@ -50,6 +51,7 @@ IMPORTANT: NEVER modify or remove any data I've already provided. Your job is on
 1. Fill in completely empty fields
 2. Enhance fields that need more detail WHILE keeping my original content
 3. If job requirements are provided, tailor additions to match those requirements
+4. INCLUDE ONLY UP TO 4 MOST RELEVANT GITHUB PROJECTS that best align with the job requirements
 
 MY MANUALLY ENTERED DATA (DO NOT CHANGE THIS):
 ${JSON.stringify(manualData, null, 2)}
@@ -69,6 +71,7 @@ INSTRUCTIONS:
 - Only add new entries to arrays (like skills, education, etc.) if needed, don't modify existing ones
 - For dates, use formats like "June 2019" or "March 2022 - Present"
 - If I provided a field, even partially, preserve it exactly as is
+- If selecting GitHub projects, choose only the 4 most relevant ones based on job requirements
 `
       : `
 You are a CV assistant that helps create professional CV data in JSON format.
@@ -87,6 +90,8 @@ Only respond with valid, well-structured JSON that matches this format.
 Do not include any other text in your response.
 For missing information, use reasonable defaults or leave those fields empty.
 For dates, use formats like "June 2019" or "March 2022 - Present".
+IMPORTANT: Include only up to 4 GitHub projects that are most relevant to the job requirements.
+If creating projects from scratch, focus on quality over quantity - create fewer, more detailed projects.
 `;
 
     // Create streaming response
@@ -272,10 +277,14 @@ For dates, use formats like "June 2019" or "March 2022 - Present".
                     // - Keep all manual entries
                     // - Add AI entries only if they seem unique
 
-                    // Handle projects
-                    projects: manualData.projects?.length
-                      ? manualData.projects
-                      : cvData.projects,
+                    // Handle projects - NOW LIMITED TO 4 MOST RELEVANT
+                    projects: jobRequirements
+                      ? cvData.projects?.length
+                        ? cvData.projects.slice(0, 4)
+                        : []
+                      : manualData.projects?.length
+                      ? manualData.projects.slice(0, 4)
+                      : cvData.projects?.slice(0, 4),
 
                     // Handle experience
                     experience: manualData.experience?.length
@@ -303,10 +312,10 @@ For dates, use formats like "June 2019" or "March 2022 - Present".
                       ? { languages: cvData.languages }
                       : {}),
 
-                    // Process projects if they exist
+                    // Process projects if they exist - NOW LIMITED TO 4
                     ...(cvData.projects
                       ? {
-                          projects: cvData.projects.map((p) => ({
+                          projects: cvData.projects.slice(0, 4).map((p) => ({
                             ...p,
                             description:
                               p.description || "No description provided",
