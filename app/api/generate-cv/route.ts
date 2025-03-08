@@ -260,13 +260,13 @@ CRITICAL: For project selection, I need you to carefully analyze the job require
 
               try {
                 // Extract final JSON (either from code block or directly)
-                let finalJson = llmResponse;
+                let finalJson: string = llmResponse || "{}";
 
                 // Try to find JSON in code block first
                 const codeBlockMatch = finalJson.match(
                   /```(?:json)?\s*([\s\S]*?)\s*```/
                 );
-                if (codeBlockMatch) {
+                if (codeBlockMatch && codeBlockMatch[1]) {
                   finalJson = codeBlockMatch[1].trim();
                 } else if (finalJson.includes("{") && finalJson.includes("}")) {
                   // Otherwise extract what's between the outermost braces

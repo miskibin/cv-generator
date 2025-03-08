@@ -18,6 +18,7 @@ export interface Experience {
 export interface Education {
   institution: string;
   degree: string;
+  startDate?: string; // Add this property
   graduationDate: string;
 }
 

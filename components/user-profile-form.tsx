@@ -137,13 +137,6 @@ export function UserProfileForm() {
                 placeholder="+1 (123) 456-7890"
               />
             </LabeledField>
-            <LabeledField label="Location">
-              <Input
-                value={cvData.location || ""}
-                onChange={(e) => updateCV({ location: e.target.value })}
-                placeholder="City, Country"
-              />
-            </LabeledField>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
