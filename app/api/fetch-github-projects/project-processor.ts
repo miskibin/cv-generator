@@ -8,50 +8,15 @@ import { projectAnalysisPrompt } from "./prompts";
 export function getRelevantConfigFiles(languages: string[]): string[] {
   const configFiles: string[] = [];
 
-  const jsRelated = languages.some((lang) =>
-    ["JavaScript", "TypeScript", "JSX", "TSX"].includes(lang)
-  );
-
-  const pythonRelated = languages.some((lang) => ["Python"].includes(lang));
-
-  const rubyRelated = languages.some((lang) => ["Ruby"].includes(lang));
-
-  const goRelated = languages.some((lang) => ["Go"].includes(lang));
-
-  // Only check for JS/TS config files if the repo has JS/TS
-  if (jsRelated) {
-    configFiles.push(
-      "package.json",
-      "tsconfig.json",
-      ".eslintrc",
-      ".eslintrc.js",
-      ".eslintrc.json",
-      "webpack.config.js",
-      "vite.config.js",
-      "next.config.js"
-    );
+  // Check for JS/TS config files
+  if (languages.some((lang) => ["JavaScript", "TypeScript"].includes(lang))) {
+    configFiles.push("package.json");
   }
 
-  // Only check for Python config files if the repo has Python
-  if (pythonRelated) {
-    configFiles.push("requirements.txt", "pyproject.toml", "setup.py");
+  // Check for Python config files
+  if (languages.includes("Python")) {
+    configFiles.push("requirements.txt", "pyproject.toml");
   }
-
-  if (rubyRelated) {
-    configFiles.push("Gemfile");
-  }
-
-  if (goRelated) {
-    configFiles.push("go.mod");
-  }
-
-  // Always check for these common files
-  configFiles.push(
-    "Dockerfile",
-    "docker-compose.yml",
-    ".github/workflows/main.yml",
-    "Jenkinsfile"
-  );
 
   return configFiles;
 }
@@ -64,7 +29,7 @@ export async function processRepository(
   // Extract data from GraphQL response
   const languages = repo.languages.nodes.map((lang: any) => lang.name);
 
-  // Get README content from GraphQL response
+  // Get README content
   let readmeContent = "";
   if (repo.object?.text) {
     readmeContent = repo.object.text;
@@ -87,11 +52,7 @@ export async function processRepository(
   };
 
   // Enhance with LLM if we have enough data
-  if (
-    readmeContent ||
-    projectData.packageJson ||
-    projectData.pythonDependencies.length > 0
-  ) {
+  if (readmeContent) {
     const enhancedProject = await enhanceProjectWithLLM(
       processedProject,
       readmeContent,
@@ -121,11 +82,11 @@ async function fetchAdditionalFiles(
     return { packageJson, pythonDependencies, configFiles };
   }
 
-  // Only check relevant config files based on languages
+  // Get only the most important config files
   const filesToCheck = getRelevantConfigFiles(languages);
 
-  // Check for package.json if it's a JS/TS project
-  if (languages.some((lang) => ["JavaScript", "TypeScript"].includes(lang))) {
+  // Check for package.json
+  if (filesToCheck.includes("package.json")) {
     try {
       const packageJsonContent = await fetchFile(
         repo,
@@ -134,57 +95,36 @@ async function fetchAdditionalFiles(
       );
       if (packageJsonContent) {
         packageJson = JSON.parse(packageJsonContent);
+        configFiles.push("package.json");
       }
     } catch (error) {
-      console.error(`Error parsing package.json for ${repo.name}:`, error);
+      // Silently fail
     }
   }
 
-  // Check for Python files if it's a Python project
-  if (languages.includes("Python")) {
-    try {
-      // Check for requirements.txt
-      const requirementsContent = await fetchFile(
-        repo,
-        username,
-        "requirements.txt"
-      );
-      if (requirementsContent) {
-        pythonDependencies = [
-          ...pythonDependencies,
-          ...parseRequirements(requirementsContent),
-        ];
-      }
-
-      // Check for pyproject.toml
-      const pyprojectContent = await fetchFile(
-        repo,
-        username,
-        "pyproject.toml"
-      );
-      if (pyprojectContent) {
-        pythonDependencies = [
-          ...pythonDependencies,
-          ...parsePyprojectToml(pyprojectContent),
-        ];
-      }
-    } catch (error) {
-      console.error(
-        `Error parsing Python project files for ${repo.name}:`,
-        error
-      );
-    }
-  }
-
-  // Check for other config files but limit to relevant ones
-  const configFilePromises = filesToCheck
-    .slice(0, 5)
-    .map((file) =>
-      fetchFile(repo, username, file).then((content) => (content ? file : null))
+  // Check for Python files
+  if (filesToCheck.includes("requirements.txt")) {
+    const requirementsContent = await fetchFile(
+      repo,
+      username,
+      "requirements.txt"
     );
+    if (requirementsContent) {
+      pythonDependencies = parseRequirements(requirementsContent);
+      configFiles.push("requirements.txt");
+    }
+  }
 
-  const configFilesResults = await Promise.all(configFilePromises);
-  configFiles = configFilesResults.filter(Boolean) as string[];
+  if (filesToCheck.includes("pyproject.toml")) {
+    const pyprojectContent = await fetchFile(repo, username, "pyproject.toml");
+    if (pyprojectContent) {
+      pythonDependencies = [
+        ...pythonDependencies,
+        ...parsePyprojectToml(pyprojectContent),
+      ];
+      configFiles.push("pyproject.toml");
+    }
+  }
 
   return { packageJson, pythonDependencies, configFiles };
 }
@@ -200,7 +140,7 @@ async function enhanceProjectWithLLM(
   }
 ): Promise<Project | null> {
   try {
-    // Generate prompt with all available information
+    // Generate prompt
     const prompt = projectAnalysisPrompt(
       project.name,
       project.description,
@@ -221,38 +161,25 @@ async function enhanceProjectWithLLM(
     // Extract JSON from response
     const jsonMatch = llmResult.match(/({[\s\S]*})/);
     if (jsonMatch) {
-      try {
-        const parsedResult = JSON.parse(jsonMatch[0]);
+      const parsedResult = JSON.parse(jsonMatch[0]);
 
-        // Update the project with Together API-provided data
-        if (parsedResult.description) {
-          project.description = parsedResult.description;
-        }
-
-        if (
-          parsedResult.technologies &&
-          Array.isArray(parsedResult.technologies) &&
-          parsedResult.technologies.length > 0
-        ) {
-          // Merge technologies from API and Together API without duplicates
-          const allTechnologies = new Set([
-            ...project.technologies,
-            ...parsedResult.technologies,
-          ]);
-          project.technologies = Array.from(allTechnologies);
-        }
-
-        return project;
-      } catch (parseError) {
-        console.error(
-          `Error parsing Together API response for ${project.name}:`,
-          parseError
-        );
+      // Update project with LLM data
+      if (parsedResult.description) {
+        project.description = parsedResult.description;
       }
+
+      if (
+        parsedResult.technologies &&
+        Array.isArray(parsedResult.technologies)
+      ) {
+        project.technologies = parsedResult.technologies;
+      }
+
+      return project;
     }
-  } catch (llmError) {
-    console.error(`Error using Together API for ${project.name}:`, llmError);
+  } catch (error) {
+    // Silently fail and return original project
   }
 
-  return null;
+  return project;
 }

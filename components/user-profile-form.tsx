@@ -65,7 +65,7 @@ export function UserProfileForm() {
     updateCV({
       education: [
         ...(cvData.education || []),
-        { institution: "", degree: "", graduationDate: "" },
+        { institution: "", degree: "", startDate: "", graduationDate: "" },
       ],
     });
   };

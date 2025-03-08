@@ -3,6 +3,43 @@ import { CVData } from "@/types/cv";
 import { getTypeDefinitions } from "@/utils/typeToString";
 import { generateWithTogether } from "@/utils/together-api";
 
+// Utility function to score projects against job requirements
+function scoreProjectRelevance(project: any, jobRequirements: string): number {
+  if (!project || !jobRequirements) return 0;
+
+  const jobText = jobRequirements.toLowerCase();
+  let score = 0;
+
+  // Project name relevance
+  if (project.name && jobText.includes(project.name.toLowerCase())) {
+    score += 10;
+  }
+
+  // Description relevance - check for keyword matches
+  if (project.description) {
+    const descriptionLower = project.description.toLowerCase();
+    // Split job requirements into words and check for matches
+    const jobKeywords = jobText.split(/\W+/).filter((word) => word.length > 3);
+
+    for (const keyword of jobKeywords) {
+      if (descriptionLower.includes(keyword.toLowerCase())) {
+        score += 5;
+      }
+    }
+  }
+
+  // Technologies relevance - highest weight factor
+  if (project.technologies && Array.isArray(project.technologies)) {
+    for (const tech of project.technologies) {
+      if (jobText.includes(tech.toLowerCase())) {
+        score += 15; // Higher score for technology matches
+      }
+    }
+  }
+
+  return score;
+}
+
 export async function POST(request: Request) {
   try {
     const {
@@ -35,7 +72,12 @@ Make the CV more relevant by:
 2. Prioritizing relevant experience
 3. Using appropriate keywords from the job description
 4. Adjusting the summary/about section to position the candidate for this specific role
-5. SELECT ONLY UP TO 4 MOST RELEVANT GITHUB PROJECTS that best demonstrate skills matching the job requirements
+5. CRITICAL: For GitHub projects, carefully analyze the job requirements and SELECT ONLY THE 4 MOST RELEVANT PROJECTS that:
+   - Use technologies mentioned in the job description
+   - Demonstrate skills required by the job
+   - Solve problems similar to what the job entails
+   - Each project should directly relate to at least one key requirement in the job description
+   - Do NOT rely on the order you receive projects - evaluate each one individually against the job requirements
 `
       : `
 No specific job requirements provided. Create a general-purpose professional CV with up to 4 of the most impressive projects.
@@ -51,7 +93,7 @@ IMPORTANT: NEVER modify or remove any data I've already provided. Your job is on
 1. Fill in completely empty fields
 2. Enhance fields that need more detail WHILE keeping my original content
 3. If job requirements are provided, tailor additions to match those requirements
-4. INCLUDE ONLY UP TO 4 MOST RELEVANT GITHUB PROJECTS that best align with the job requirements
+4. CRITICAL INSTRUCTION FOR PROJECTS: When job requirements are provided, you must carefully analyze ALL available projects and include ONLY THE 4 PROJECTS THAT ARE MOST RELEVANT to the specific job requirements. Consider technologies used, problems solved, and skills demonstrated. DO NOT choose projects based on their order or presentation - evaluate each one on its match to the job requirements.
 
 MY MANUALLY ENTERED DATA (DO NOT CHANGE THIS):
 ${JSON.stringify(manualData, null, 2)}
@@ -71,7 +113,7 @@ INSTRUCTIONS:
 - Only add new entries to arrays (like skills, education, etc.) if needed, don't modify existing ones
 - For dates, use formats like "June 2019" or "March 2022 - Present"
 - If I provided a field, even partially, preserve it exactly as is
-- If selecting GitHub projects, choose only the 4 most relevant ones based on job requirements
+- For project selection, carefully match each project against job requirements and choose the 4 most relevant ones
 `
       : `
 You are a CV assistant that helps create professional CV data in JSON format.
@@ -90,8 +132,7 @@ Only respond with valid, well-structured JSON that matches this format.
 Do not include any other text in your response.
 For missing information, use reasonable defaults or leave those fields empty.
 For dates, use formats like "June 2019" or "March 2022 - Present".
-IMPORTANT: Include only up to 4 GitHub projects that are most relevant to the job requirements.
-If creating projects from scratch, focus on quality over quantity - create fewer, more detailed projects.
+CRITICAL: For project selection, I need you to carefully analyze the job requirements and include ONLY the 4 projects that most directly match the required skills, technologies, and responsibilities. Do not simply pick the first 4 projects - evaluate each project's relevance to the job.
 `;
 
     // Create streaming response
@@ -273,16 +314,30 @@ If creating projects from scratch, focus on quality over quantity - create fewer
                       ...(manualData.languages || {}),
                     },
 
-                    // For arrays of objects like projects, education, and experience:
-                    // - Keep all manual entries
-                    // - Add AI entries only if they seem unique
-
-                    // Handle projects - NOW LIMITED TO 4 MOST RELEVANT
+                    // Project selection logic - prioritize based on job requirements if provided
                     projects: jobRequirements
-                      ? cvData.projects?.length
+                      ? manualData.projects && manualData.projects.length > 0
+                        ? // When we have both job requirements and manual projects,
+                          // sort manual projects by relevance to job requirements
+                          [...manualData.projects]
+                            .sort((a, b) => {
+                              const scoreA = scoreProjectRelevance(
+                                a,
+                                jobRequirements
+                              );
+                              const scoreB = scoreProjectRelevance(
+                                b,
+                                jobRequirements
+                              );
+                              return scoreB - scoreA; // Higher score first
+                            })
+                            .slice(0, 4)
+                        : // When we have job requirements but no manual projects, use AI projects
+                        cvData.projects?.length
                         ? cvData.projects.slice(0, 4)
                         : []
-                      : manualData.projects?.length
+                      : // No job requirements - use manual projects first, fall back to AI projects
+                      manualData.projects?.length
                       ? manualData.projects.slice(0, 4)
                       : cvData.projects?.slice(0, 4),
 
@@ -312,7 +367,8 @@ If creating projects from scratch, focus on quality over quantity - create fewer
                       ? { languages: cvData.languages }
                       : {}),
 
-                    // Process projects if they exist - NOW LIMITED TO 4
+                    // Process projects if they exist - LIMITED TO 4 MOST RELEVANT ones
+                    // We're relying on AI to rank projects by relevance already
                     ...(cvData.projects
                       ? {
                           projects: cvData.projects.slice(0, 4).map((p) => ({

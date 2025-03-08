@@ -55,41 +55,21 @@ export async function fetchUserRepositories(
     }),
   });
 
-  if (response.status === 401) {
-    console.warn(
-      "GitHub API authentication failed. Consider adding a GITHUB_TOKEN environment variable."
-    );
-  }
-
   if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error("GitHub user not found");
-    }
-    if (response.status === 403) {
-      throw new Error(
-        "GitHub API rate limit exceeded. Please try again later."
-      );
-    }
     throw new Error(`GitHub API error: ${response.statusText}`);
   }
 
   return response.json();
 }
 
-// Fetch file content from GitHub API with retry logic
+// Fetch file content from GitHub API
 export async function fetchFile(
   repo: any,
   username: string,
-  filePath: string,
-  retryCount = 0
+  filePath: string
 ): Promise<string | null> {
   const githubToken = process.env.GITHUB_TOKEN;
-  if (!githubToken) {
-    console.warn(
-      "No GITHUB_TOKEN provided, skipping file fetch to avoid rate limits"
-    );
-    return null;
-  }
+  if (!githubToken) return null;
 
   try {
     const fileResponse = await fetch(
@@ -101,22 +81,6 @@ export async function fetchFile(
       }
     );
 
-    if (
-      fileResponse.status === 403 &&
-      fileResponse.headers.get("x-ratelimit-remaining") === "0"
-    ) {
-      if (retryCount < 3) {
-        console.warn(
-          `Rate limit hit, retrying after delay (attempt ${retryCount + 1})`
-        );
-        return fetchFile(repo, username, filePath, retryCount + 1);
-      } else {
-        throw new Error(
-          "GitHub API rate limit exceeded. Please try again later."
-        );
-      }
-    }
-
     if (fileResponse.ok) {
       const fileData = await fileResponse.json();
       if (fileData.content) {
@@ -125,14 +89,6 @@ export async function fetchFile(
     }
     return null;
   } catch (error) {
-    if (retryCount < 3 && (error as Error).message.includes("rate limit")) {
-      console.warn(
-        `Error due to rate limit, retrying after delay (attempt ${
-          retryCount + 1
-        })`
-      );
-      return fetchFile(repo, username, filePath, retryCount + 1);
-    }
     return null;
   }
 }

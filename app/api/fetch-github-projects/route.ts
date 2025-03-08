@@ -20,15 +20,6 @@ export async function GET(request: Request) {
     // Check for GraphQL errors
     if (data.errors) {
       const errorMessage = data.errors[0]?.message || "GraphQL query failed";
-      console.error("GitHub GraphQL API error:", data.errors);
-
-      if (errorMessage.toLowerCase().includes("rate limit")) {
-        return NextResponse.json(
-          { error: "GitHub API rate limit exceeded. Please try again later." },
-          { status: 429 }
-        );
-      }
-
       return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 
@@ -42,26 +33,21 @@ export async function GET(request: Request) {
 
     const repos = data.data.user.repositories.nodes;
 
-    // Process all repositories concurrently
-    const projectPromises = repos.map(async (repo: any) => {
+    // Process repositories
+    const projects = [];
+    for (const repo of repos) {
       try {
-        return await processRepository(repo, username);
-      } catch (repoError) {
-        console.error(`Error processing repo ${repo.name}:`, repoError);
-        return null;
+        const project = await processRepository(repo, username);
+        if (project) projects.push(project);
+      } catch (error) {
+        console.error(`Error processing repo ${repo.name}`);
       }
-    });
-
-    // Wait for all repositories to be processed and filter out failures
-    const projects = (await Promise.all(projectPromises)).filter(Boolean);
+    }
 
     return NextResponse.json({ projects });
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
-    console.error("Error fetching GitHub projects:", error);
-
-    const status = errorMessage.includes("rate limit") ? 429 : 500;
-    return NextResponse.json({ error: errorMessage }, { status });
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

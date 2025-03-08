@@ -242,15 +242,26 @@ export function ManualCVForm() {
                     }}
                     placeholder="Degree"
                   />
-                  <Input
-                    value={edu.graduationDate}
-                    onChange={(e) => {
-                      const education = [...(cvData.education || [])];
-                      education[index].graduationDate = e.target.value;
-                      updateCV({ education });
-                    }}
-                    placeholder="Graduation Date"
-                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      value={edu.startDate || ""}
+                      onChange={(e) => {
+                        const education = [...(cvData.education || [])];
+                        education[index].startDate = e.target.value;
+                        updateCV({ education });
+                      }}
+                      placeholder="Start Date"
+                    />
+                    <Input
+                      value={edu.graduationDate}
+                      onChange={(e) => {
+                        const education = [...(cvData.education || [])];
+                        education[index].graduationDate = e.target.value;
+                        updateCV({ education });
+                      }}
+                      placeholder="Graduation Date"
+                    />
+                  </div>
                 </FieldGroup>
               </ItemCard>
             ))}

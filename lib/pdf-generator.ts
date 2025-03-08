@@ -524,11 +524,15 @@ function renderCV(
       applyStyle("h3");
       pdf.text(edu.degree, margin.left, yPos);
 
-      // Graduation date - right aligned
+      // Date range - right aligned
       applyStyle("normal");
+      const dateText =
+        edu.startDate && edu.graduationDate
+          ? `${edu.startDate} - ${edu.graduationDate}`
+          : edu.graduationDate || "";
       pdf.text(
-        edu.graduationDate,
-        pageWidth - margin.right - pdf.getTextWidth(edu.graduationDate),
+        dateText,
+        pageWidth - margin.right - pdf.getTextWidth(dateText),
         yPos
       );
       yPos += spacing.afterH3;
@@ -544,6 +548,7 @@ function renderCV(
       }
     }
   }
+
   // Projects Section
   if (data.projects?.length) {
     yPos = checkForNewPage(spacing.beforeH2 + spacing.lineHeight * 3, yPos);
