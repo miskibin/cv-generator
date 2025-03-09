@@ -158,7 +158,9 @@ async function enhanceProjectWithLLM(
       max_tokens: 1024,
     });
 
-    // Extract JSON from response
+    // Extract JSON from response if llmResult is not null
+    if (!llmResult) return project;
+
     const jsonMatch = llmResult.match(/({[\s\S]*})/);
     if (jsonMatch) {
       const parsedResult = JSON.parse(jsonMatch[0]);

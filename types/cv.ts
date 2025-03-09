@@ -3,6 +3,8 @@ export interface Project {
   description: string;
   technologies: string[];
   github?: string;
+  stars?: number;
+  forks?: number;
   url?: string;
 }
 

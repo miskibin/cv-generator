@@ -45,7 +45,7 @@ export async function generateWithTogether(
     });
 
     // Return the generated text from the response
-    return response.choices[0].message.content;
+    return response.choices?.[0]?.message?.content || "";
   } catch (error) {
     console.error("Error calling Together API:", error);
     throw error;
