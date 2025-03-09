@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage, StateStorage } from "zustand/middleware";
 import { CVData } from "@/types/cv";
 
 interface GitHubProject {
@@ -35,6 +35,20 @@ interface CVStore {
   resetFetchStatus: () => void;
 }
 
+// Custom storage to handle proper deep serialization
+const customStorage: StateStorage = {
+  getItem: (name: string): string | null => {
+    const str = localStorage.getItem(name);
+    return str ?? null;
+  },
+  setItem: (name: string, value: string): void => {
+    localStorage.setItem(name, value);
+  },
+  removeItem: (name: string): void => {
+    localStorage.removeItem(name);
+  },
+};
+
 export const useCVStore = create<CVStore>()(
   persist(
     (set) => ({
@@ -51,9 +65,13 @@ export const useCVStore = create<CVStore>()(
       },
 
       updateCV: (data) =>
-        set((state) => ({
-          cvData: { ...state.cvData, ...data },
-        })),
+        set((state) => {
+          // Create a deep copy of the current state to ensure nested objects are properly updated
+          const updatedData = JSON.parse(
+            JSON.stringify({ ...state.cvData, ...data })
+          );
+          return { cvData: updatedData };
+        }),
       resetCV: () =>
         set({
           cvData: {},
@@ -82,6 +100,7 @@ export const useCVStore = create<CVStore>()(
     }),
     {
       name: "cv-storage",
+      storage: createJSONStorage(() => customStorage),
     }
   )
 );

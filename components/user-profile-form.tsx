@@ -25,7 +25,7 @@ import {
   FieldGroup,
   Technologies,
 } from "./form/cv-form-components";
-import { Trash2 } from "lucide-react";
+import { Trash2, Github, ExternalLink } from "lucide-react";
 
 export function UserProfileForm() {
   const { cvData, updateCV } = useCVStore();
@@ -86,7 +86,7 @@ export function UserProfileForm() {
           startDate: "",
           endDate: "",
           summary: "",
-          projects: [],
+          projects: [], // Ensure projects array is always initialized
         },
       ],
     });
@@ -95,6 +95,20 @@ export function UserProfileForm() {
   const removeExperience = (index: number) => {
     const experience = [...(cvData.experience || [])];
     experience.splice(index, 1);
+    updateCV({ experience });
+  };
+
+  const addProjectToExperience = (experienceIndex: number) => {
+    const experience = JSON.parse(JSON.stringify(cvData.experience || []));
+    if (!experience[experienceIndex].projects) {
+      experience[experienceIndex].projects = [];
+    }
+    experience[experienceIndex].projects.push({
+      name: "",
+      description: "",
+      technologies: [],
+    });
+    // Use the modified updateCV function to ensure deep persistence
     updateCV({ experience });
   };
 
@@ -387,18 +401,7 @@ export function UserProfileForm() {
                 <div className="flex items-center justify-between">
                   <Label>Projects</Label>
                   <AddButton
-                    onClick={() => {
-                      const experience = [...(cvData.experience || [])];
-                      if (!experience[index].projects) {
-                        experience[index].projects = [];
-                      }
-                      experience[index].projects?.push({
-                        name: "",
-                        description: "",
-                        technologies: [],
-                      });
-                      updateCV({ experience });
-                    }}
+                    onClick={() => addProjectToExperience(index)}
                     text="Add Project"
                   />
                 </div>
@@ -481,30 +484,122 @@ export function UserProfileForm() {
         </FormSection>
 
         {/* GitHub Projects */}
-        <FormSection title="GitHub Projects">
+        <FormSection
+          title="GitHub Projects"
+          action={
+            <AddButton
+              onClick={() => {
+                updateCV({
+                  projects: [
+                    ...(cvData.projects || []),
+                    {
+                      name: "",
+                      description: "",
+                      technologies: [],
+                      url: "",
+                      github: "",
+                    },
+                  ],
+                });
+              }}
+              text="Add Project"
+            />
+          }
+        >
           <GitHubProjectsFetcher />
 
-          {/* Display projects with technologies */}
+          {/* Display and edit projects */}
           {cvData.projects && cvData.projects.length > 0 && (
             <div className="mt-4 space-y-3">
-              <h3 className="text-sm font-medium">Project Technologies</h3>
               {cvData.projects.map((project, index) => (
-                <div key={index} className="border rounded-md p-3">
-                  <div className="font-medium">{project.name}</div>
-                  {project.technologies && project.technologies.length > 0 ? (
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {project.technologies.map((tech, i) => (
-                        <Badge key={i} variant="secondary" className="text-xs">
-                          {tech}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-gray-500 mt-1">
-                      No technologies listed
-                    </div>
-                  )}
-                </div>
+                <ItemCard
+                  key={index}
+                  title={project.name || "New Project"}
+                  onRemove={() => {
+                    const projects = [...(cvData.projects || [])];
+                    projects.splice(index, 1);
+                    updateCV({ projects });
+                  }}
+                >
+                  <LabeledField label="Project Name">
+                    <Input
+                      value={project.name || ""}
+                      onChange={(e) => {
+                        const projects = JSON.parse(
+                          JSON.stringify(cvData.projects || [])
+                        );
+                        projects[index].name = e.target.value;
+                        updateCV({ projects });
+                      }}
+                      placeholder="Project name"
+                    />
+                  </LabeledField>
+
+                  <LabeledField label="Description">
+                    <Textarea
+                      value={project.description || ""}
+                      onChange={(e) => {
+                        const projects = JSON.parse(
+                          JSON.stringify(cvData.projects || [])
+                        );
+                        projects[index].description = e.target.value;
+                        updateCV({ projects });
+                      }}
+                      placeholder="Project description"
+                      className="min-h-20"
+                    />
+                  </LabeledField>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <LabeledField label="GitHub URL">
+                      <div className="relative">
+                        <Input
+                          value={project.github || ""}
+                          onChange={(e) => {
+                            const projects = JSON.parse(
+                              JSON.stringify(cvData.projects || [])
+                            );
+                            projects[index].github = e.target.value;
+                            updateCV({ projects });
+                          }}
+                          placeholder="GitHub repository URL"
+                          className="pl-8"
+                        />
+                        <Github className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
+                      </div>
+                    </LabeledField>
+                    <LabeledField label="Live URL">
+                      <div className="relative">
+                        <Input
+                          value={project.url || ""}
+                          onChange={(e) => {
+                            const projects = JSON.parse(
+                              JSON.stringify(cvData.projects || [])
+                            );
+                            projects[index].url = e.target.value;
+                            updateCV({ projects });
+                          }}
+                          placeholder="Live demo URL"
+                          className="pl-8"
+                        />
+                        <ExternalLink className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
+                      </div>
+                    </LabeledField>
+                  </div>
+
+                  <LabeledField label="Technologies">
+                    <Technologies
+                      technologies={project.technologies || []}
+                      onChange={(technologies) => {
+                        const projects = JSON.parse(
+                          JSON.stringify(cvData.projects || [])
+                        );
+                        projects[index].technologies = technologies;
+                        updateCV({ projects });
+                      }}
+                    />
+                  </LabeledField>
+                </ItemCard>
               ))}
             </div>
           )}
