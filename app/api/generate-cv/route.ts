@@ -40,6 +40,74 @@ function scoreProjectRelevance(project: any, jobRequirements: string): number {
   return score;
 }
 
+/**
+ * Generate a tailored About section based on user data and job requirements
+ */
+async function generateEnhancedAboutSection(
+  userAbout: string | undefined,
+  jobRequirements: string | undefined,
+  model: string
+): Promise<string> {
+  // If no user data or job requirements, return original or empty
+  if (!userAbout && !jobRequirements) return userAbout || "";
+  if (!jobRequirements) return userAbout || "";
+
+  // Create a specialized prompt for generating the About section
+  const aboutPrompt = `
+You are a professional CV writer specializing in creating personalized "About" sections.
+
+${
+  userAbout
+    ? `USER PROVIDED ABOUT SECTION:
+${userAbout}`
+    : "The user hasn't provided an about section."
+}
+
+JOB REQUIREMENTS:
+${jobRequirements}
+
+TASK:
+Create a concise, professional "About" section (3-5 sentences) that:
+1. Maintains the user's original voice, tone, and key personal details
+2. Subtly incorporates relevant skills/experience that match the job requirements
+3. Positions the candidate as an ideal fit for the role without being too obvious
+4. Sounds completely natural and human-written, not AI-generated
+5. Uses first-person perspective
+6. Avoids clichés and generic statements
+
+IMPORTANT:
+- If the user provided their own About section, use it as the foundation and enhance it
+- If no user About section exists, create one that feels authentic based on the job requirements
+- The final text should be 100-150 words and focus on relevant professional qualities
+- DO NOT use phrases like "I am passionate about" or "I am a dedicated professional"
+- Return ONLY the About section text with no additional formatting or explanation
+`;
+
+  try {
+    // Generate enhanced About section
+    const aboutResponse = await generateWithTogether(aboutPrompt, {
+      temperature: 0.7,
+      max_tokens: 300,
+    });
+
+    // Clean up the response
+    let enhancedAbout = aboutResponse.trim();
+
+    // Remove any markdown code blocks if present
+    if (enhancedAbout.startsWith("```") && enhancedAbout.endsWith("```")) {
+      enhancedAbout = enhancedAbout
+        .replace(/```(?:markdown|text)?\s*/, "")
+        .replace(/\s*```$/, "");
+    }
+
+    return enhancedAbout;
+  } catch (error) {
+    console.error("Error generating enhanced About section:", error);
+    // Fall back to the original about section
+    return userAbout || "";
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const {
@@ -279,6 +347,28 @@ CRITICAL: For project selection, I need you to carefully analyze the job require
                 // Parse the extracted JSON
                 const cvData: CVData = JSON.parse(finalJson);
 
+                // Generate enhanced about section if job requirements exist
+                let enhancedAbout: string | undefined;
+
+                if (jobRequirements) {
+                  controller.enqueue(
+                    new TextEncoder().encode(
+                      JSON.stringify({
+                        status: "Tailoring your About section to the job...",
+                      }) + "\n"
+                    )
+                  );
+
+                  // Use either manual data's about section or the AI-generated one as the base
+                  const baseAbout = manualData?.about || cvData.about;
+
+                  enhancedAbout = await generateEnhancedAboutSection(
+                    baseAbout,
+                    jobRequirements,
+                    model
+                  );
+                }
+
                 // Create the final result - prioritizing manual data fields over AI-generated ones
                 let enhancedData: CVData;
 
@@ -297,8 +387,8 @@ CRITICAL: For project selection, I need you to carefully analyze the job require
                       cvData.email ||
                       "no-email@example.com",
 
-                    // Carefully merge AI-generated content for these fields
-                    about: manualData.about || cvData.about,
+                    // Use the enhanced about section if available, otherwise fall back
+                    about: enhancedAbout || manualData.about || cvData.about,
 
                     // For skills, combine both but avoid duplicates
                     skills: [
@@ -357,6 +447,10 @@ CRITICAL: For project selection, I need you to carefully analyze the job require
                     firstName: cvData.firstName?.trim() || "Anonymous",
                     lastName: cvData.lastName?.trim() || "User",
                     email: cvData.email?.trim() || "no-email@example.com",
+
+                    // Use enhanced about if available
+                    about: enhancedAbout || cvData.about?.trim() || "",
+
                     // Only include other fields if they exist
                     ...(cvData.github ? { github: cvData.github } : {}),
                     ...(cvData.phone ? { phone: cvData.phone } : {}),

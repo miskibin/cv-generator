@@ -34,7 +34,7 @@ const defaultSpacing = {
   beforeH3: 7,
   afterH3: 5,
   paragraphGap: 5,
-  lineHeight: 7,
+  lineHeight: 5,
   itemGap: 7,
   sectionGap: 8,
   badgePadding: 2,
@@ -199,7 +199,7 @@ function createPDFComponents(ctx: PDFContext) {
     yPos += spacing.beforeH2;
     applyStyle("h2");
     pdf.text(title, margin.left, yPos);
-    yPos += spacing.lineHeight * 0.8;
+    yPos += spacing.lineHeight;
 
     // Section divider
     pdf.setDrawColor(50, 90, 140);
@@ -300,7 +300,7 @@ function createPDFComponents(ctx: PDFContext) {
       // Check if we need to wrap to new line
       if (currentX + itemWidth > margin.left + maxWidth) {
         currentX = initialX; // Use initial X for proper alignment
-        currentY += spacing.lineHeight;
+        currentY += spacing.lineHeight * 1.5;
       }
 
       // Draw the badge
@@ -482,8 +482,7 @@ function renderCV(
             contentWidth - 6
           );
           pdf.text(descLines, margin.left + 6, yPos);
-          yPos +=
-            spacing.lineHeight * descLines.length + spacing.paragraphGap * 0.25; // Changed from 0.5 to 0.25
+          yPos += spacing.lineHeight * descLines.length + spacing.paragraphGap; // Changed from 0.5 to 0.25
 
           // Technologies with proper alignment
           if (project.technologies?.length) {
