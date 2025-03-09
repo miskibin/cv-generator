@@ -12,41 +12,6 @@ CV Maker is an intelligent resume building tool that helps you create profession
 - **Multiple Input Methods** - Manual form, AI generation, or a hybrid approach
 - **Professional PDF Export** - Generate beautiful, ATS-friendly PDF resumes with custom styling
 
-## 🚀 Getting Started
-
-1. **Clone the repository**
-
-```bash
-git clone https://github.com/yourusername/cv-maker.git
-cd cv-maker
-```
-
-2. **Install dependencies**
-
-```bash
-npm install
-# or
-yarn install
-```
-
-3. **Set up environment variables**
-
-Create a `.env.local` file in the root directory with:
-
-```
-TOGETHER_API_KEY=your_together_api_key
-```
-
-4. **Run the development server**
-
-```bash
-npm run dev
-# or
-yarn dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) to see the application.
-
 ## 💡 How It Works
 
 1. Enter your information or let AI generate it from a simple description
