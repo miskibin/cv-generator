@@ -1,6 +1,7 @@
 # CV Maker - AI-Powered Resume Generator
 
-![CV Maker Logo](public/logo.svg)
+![image](https://github.com/user-attachments/assets/b4aacac9-ffea-4836-889b-bc8b0ab8eb92)
+
 
 CV Maker is an intelligent resume building tool that helps you create professional, tailored CVs in minutes. Leveraging AI and GitHub integration, it automatically generates impressive resumes that stand out to employers.
 
